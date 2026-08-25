@@ -6,7 +6,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Lenis from 'lenis';
 import { Volume2, VolumeX, ArrowUpRight } from 'lucide-react';
-import { PROJECTS_DATA, PRINCIPLES_LIST, PHILOSOPHY_DATA, SERVICES_DATA, STATS_DATA, FAQ_DATA, TRANSLATIONS } from './data/portfolioData';
+import { getProjectsData, getPrinciplesList, getPhilosophyData, getServicesData, getStatsData, getFaqData, TRANSLATIONS } from './data/portfolioData';
 import { ProjectMockup } from './components/ProjectMockup';
 import { ContactModal } from './components/ContactModal';
 import { MorphingMenu } from './components/MorphingMenu';
@@ -169,6 +169,13 @@ export default function App() {
   };
 
   const t = TRANSLATIONS[lang];
+  const currentProjects = getProjectsData(lang);
+  const currentPrinciples = getPrinciplesList(lang);
+  const currentPhilosophy = getPhilosophyData(lang);
+  const currentServices = getServicesData(lang);
+  const currentStats = getStatsData(lang);
+  const currentFaq = getFaqData(lang);
+  const localizedActiveProject = activeProject ? (currentProjects.find((p) => p.id === activeProject.id) || activeProject) : null;
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-[#121212] font-sans selection:bg-black selection:text-white relative">
@@ -278,8 +285,8 @@ export default function App() {
           {/* GIANT INFINITE SLIDE MARQUEE TEXT */}
           <div className="absolute w-full top-1/2 -translate-y-1/2 pointer-events-none select-none z-0 overflow-hidden opacity-95">
             <div className="animate-marquee-infinite flex whitespace-nowrap text-[12vw] sm:text-[14vw] font-bold tracking-tighter text-[#111111] leading-none uppercase">
-              <span>obsession • perfection • obsession • perfection • obsession • perfection • obsession • perfection •&nbsp;</span>
-              <span>obsession • perfection • obsession • perfection • obsession • perfection • obsession • perfection •&nbsp;</span>
+              <span>{t.marqueeWord}</span>
+              <span>{t.marqueeWord}</span>
             </div>
           </div>
 
@@ -356,7 +363,7 @@ export default function App() {
       <section id="projects" className="py-12 sm:py-20 border-t border-zinc-200/80">
         <div className="w-full">
           <div className="grid grid-cols-1 md:grid-cols-3 border-b border-zinc-200">
-            {PROJECTS_DATA.map((project, idx) => (
+            {currentProjects.map((project, idx) => (
               <ScrollReveal key={project.id} delay={idx * 100} distance={30} className="h-full">
                 <div
                   onClick={() => {
@@ -400,7 +407,7 @@ export default function App() {
             </ScrollReveal>
           </div>
           <div className="md:col-span-8 space-y-3 sm:space-y-3.5 text-xs sm:text-[13px] text-zinc-700">
-            {PRINCIPLES_LIST.map((principle, index) => (
+            {currentPrinciples.map((principle, index) => (
               <ScrollReveal key={index} delay={index * 80} distance={20}>
                 <div className="hover:text-black transition-colors">
                   {principle}
@@ -432,7 +439,7 @@ export default function App() {
             </ScrollReveal>
 
             <div className="space-y-4 pt-4 border-t border-zinc-200/60">
-              {PHILOSOPHY_DATA.map((item, idx) => {
+              {currentPhilosophy.map((item, idx) => {
                 const isExpanded = expandedThought === item.number;
                 return (
                   <ScrollReveal key={item.number} delay={idx * 100} distance={25}>
@@ -505,7 +512,7 @@ export default function App() {
             </ScrollReveal>
 
             <div className="space-y-4 pt-4 border-t border-zinc-200/60">
-              {SERVICES_DATA.map((service, idx) => {
+              {currentServices.map((service, idx) => {
                 const isExpanded = expandedService === service.number;
                 return (
                   <ScrollReveal key={service.number} delay={idx * 100} distance={25}>
@@ -609,7 +616,7 @@ export default function App() {
 
             {/* Stats Metric Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              {STATS_DATA.map((stat, idx) => (
+              {currentStats.map((stat, idx) => (
                 <ScrollReveal key={stat.number + stat.label} delay={idx * 80} distance={20}>
                   <div className="p-6 rounded-2xl bg-zinc-50/80 border border-zinc-200/80 hover:border-zinc-400 hover:bg-zinc-50 transition-all duration-300 space-y-2 group">
                     <div className="flex items-baseline gap-1 text-3xl sm:text-4xl font-extrabold text-zinc-900 tracking-tight font-mono-code">
@@ -653,7 +660,7 @@ export default function App() {
             </ScrollReveal>
 
             <div className="space-y-4 pt-4 border-t border-zinc-200/60">
-              {FAQ_DATA.map((faqItem, idx) => {
+              {currentFaq.map((faqItem, idx) => {
                 const isExpanded = expandedFaq === faqItem.number;
                 return (
                   <ScrollReveal key={faqItem.number} delay={idx * 80} distance={25}>
@@ -788,9 +795,9 @@ export default function App() {
         navigateTo('project-detail');
       }}
     />
-  ) : currentPage === 'project-detail' && activeProject ? (
+  ) : currentPage === 'project-detail' && localizedActiveProject ? (
     <ProjectDetailPage
-      project={activeProject}
+      project={localizedActiveProject}
       lang={lang}
       onBack={() => {
         navigateTo('projects');
@@ -802,7 +809,7 @@ export default function App() {
         setActiveProject(project);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }}
-      allProjects={PROJECTS_DATA}
+      allProjects={currentProjects}
     />
   ) : currentPage === '404' ? (
     <NotFoundPage

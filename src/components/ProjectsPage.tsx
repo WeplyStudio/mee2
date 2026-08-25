@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PROJECTS_DATA, TRANSLATIONS } from '../data/portfolioData';
+import { getProjectsData, TRANSLATIONS } from '../data/portfolioData';
 import { ProjectMockup } from './ProjectMockup';
 import { ScrollReveal } from './ScrollReveal';
 import { Language, Project } from '../types';
@@ -11,21 +11,22 @@ interface ProjectsPageProps {
   onSelectProject: (project: Project) => void;
 }
 
-const FILTERS = [
-  'all',
-  'web hosting & cloud',
-  'fintech & loan verification',
-  'digital invitation builder'
-];
-
 export const ProjectsPage: React.FC<ProjectsPageProps> = ({
   lang,
   onBack,
   onOpenContact,
   onSelectProject,
 }) => {
-  const t = TRANSLATIONS[lang];
-  const [activeFilter, setActiveFilter] = useState('all');
+  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  const projects = getProjectsData(lang);
+  const [activeFilterId, setActiveFilterId] = useState<'all' | 'web' | 'fintech' | 'invitation'>('all');
+
+  const filters: Array<{ id: 'all' | 'web' | 'fintech' | 'invitation'; label: string }> = [
+    { id: 'all', label: t.all },
+    { id: 'web', label: t.filterWeb },
+    { id: 'fintech', label: t.filterFintech },
+    { id: 'invitation', label: t.filterInvitation }
+  ];
 
   // Scroll to top on page load
   useEffect(() => {
@@ -33,15 +34,15 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
   }, []);
 
   // Filter logic
-  const filteredProjects = PROJECTS_DATA.filter((project) => {
-    if (activeFilter === 'all') return true;
-    if (activeFilter === 'web hosting & cloud') {
+  const filteredProjects = projects.filter((project) => {
+    if (activeFilterId === 'all') return true;
+    if (activeFilterId === 'web') {
       return project.id === 'zylo';
     }
-    if (activeFilter === 'fintech & loan verification') {
+    if (activeFilterId === 'fintech') {
       return project.id === 'trufin';
     }
-    if (activeFilter === 'digital invitation builder') {
+    if (activeFilterId === 'invitation') {
       return project.id === 'krigstudio';
     }
     return true;
@@ -56,7 +57,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
         <div className="md:col-span-3">
           <ScrollReveal delay={100} distance={20}>
             <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400 lowercase">
-              [works]
+              [{t.works}]
             </div>
           </ScrollReveal>
         </div>
@@ -66,7 +67,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
           <ScrollReveal delay={180} distance={25}>
             <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed max-w-3xl lowercase">
               {lang === 'id'
-                ? 'koleksi kurasi proyek unggulan yang saya bangun — zylo (perusahaan website hosting & cloud platform), trufin (web verifikasi keaslian instansi keuangan & pinjol), dan krigstudio (platform web undangan digital). fokus saya adalah arsitektur kode yang bersih dan antarmuka yang bermakna.'
+                ? 'koleksi kurasi proyek unggulan yang saya bangun — zylo (perusahaan website hosting & platform cloud), trufin (web verifikasi keaslian instansi keuangan & pinjol), dan krigstudio (platform web pembuat undangan digital). fokus saya adalah arsitektur kode yang bersih dan antarmuka yang bermakna.'
                 : lang === 'de'
                 ? 'eine kuratierte auswahl meiner leitprojekte: zylo (web-hosting & cloud-plattform), trufin (verifizierungsplattform für finanzinstitute & online-kredite) und krigstudio (plattform für digitale einladungen). mein fokus liegt auf sauberer architektur und intuitiven interfaces.'
                 : lang === 'ja'
@@ -80,18 +81,18 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
       {/* Filter Nav List matching screenshot style */}
       <ScrollReveal delay={250} distance={15}>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-12 border-b border-zinc-200/60 text-xs sm:text-[13px] font-mono-code text-zinc-400 select-none">
-          {FILTERS.map((filter) => {
-            const isActive = activeFilter === filter;
+          {filters.map((filter) => {
+            const isActive = activeFilterId === filter.id;
             return (
               <button
-                key={filter}
-                onClick={() => setActiveFilter(filter)}
+                key={filter.id}
+                onClick={() => setActiveFilterId(filter.id)}
                 className={`transition-colors flex items-center gap-1.5 cursor-pointer hover:text-black py-1 ${
                   isActive ? 'text-zinc-900 font-semibold' : 'text-zinc-400'
                 }`}
               >
                 <span>•</span>
-                <span className="lowercase">{filter}</span>
+                <span className="lowercase">{filter.label}</span>
               </button>
             );
           })}
@@ -102,7 +103,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
       <div className="py-12">
         {filteredProjects.length === 0 ? (
           <div className="py-24 text-center text-zinc-400 text-xs font-mono-code lowercase">
-            no projects match this filter
+            {t.noProjects}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 border-t border-l border-zinc-200">

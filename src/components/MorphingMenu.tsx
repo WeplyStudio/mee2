@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Language } from '../types';
+import { TRANSLATIONS } from '../data/portfolioData';
 
 interface Props {
   isOpen: boolean;
@@ -24,11 +25,11 @@ export const MorphingMenu: React.FC<Props> = ({
   onToggleAudio,
   onOpenContact,
   onOpenStory,
-  onOpen404,
   onScrollTo,
   menuLabel,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
 
   // Close on Escape key
   useEffect(() => {
@@ -106,8 +107,8 @@ export const MorphingMenu: React.FC<Props> = ({
                     isAudioPlaying ? 'bg-emerald-400 border-emerald-400 ring-2 ring-emerald-400/30' : ''
                   }`}
                 ></span>
-                <span className="font-normal tracking-wide text-zinc-400 group-hover:text-zinc-200">
-                  lend an ear
+                <span className="font-normal tracking-wide text-zinc-400 group-hover:text-zinc-200 lowercase">
+                  {t.lendAnEar}
                 </span>
               </button>
 
@@ -116,9 +117,9 @@ export const MorphingMenu: React.FC<Props> = ({
                   e.stopPropagation();
                   setIsOpen(false);
                 }}
-                className="font-semibold text-white hover:text-zinc-300 transition-colors tracking-tight text-xs cursor-pointer"
+                className="font-semibold text-white hover:text-zinc-300 transition-colors tracking-tight text-xs cursor-pointer lowercase"
               >
-                close
+                {t.close}
               </button>
             </div>
 
@@ -129,9 +130,9 @@ export const MorphingMenu: React.FC<Props> = ({
                   e.stopPropagation();
                   handleNav(() => onScrollTo('hero'));
                 }}
-                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer"
+                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer lowercase"
               >
-                home
+                {t.home}
               </button>
 
               <button
@@ -139,9 +140,9 @@ export const MorphingMenu: React.FC<Props> = ({
                   e.stopPropagation();
                   handleNav(onOpenStory);
                 }}
-                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer"
+                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer lowercase"
               >
-                aboutme
+                {t.aboutme}
               </button>
 
               <button
@@ -149,9 +150,9 @@ export const MorphingMenu: React.FC<Props> = ({
                   e.stopPropagation();
                   handleNav(() => onScrollTo('projects'));
                 }}
-                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer"
+                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer lowercase"
               >
-                projects
+                {t.projects}
               </button>
 
               <button
@@ -159,9 +160,9 @@ export const MorphingMenu: React.FC<Props> = ({
                   e.stopPropagation();
                   handleNav(() => onScrollTo('services'));
                 }}
-                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer"
+                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer lowercase"
               >
-                services
+                {t.services}
               </button>
 
               <button
@@ -169,9 +170,9 @@ export const MorphingMenu: React.FC<Props> = ({
                   e.stopPropagation();
                   handleNav(onOpenContact);
                 }}
-                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer"
+                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer lowercase"
               >
-                get in touch
+                {t.getInTouch}
               </button>
             </div>
 
@@ -222,7 +223,7 @@ export const MorphingMenu: React.FC<Props> = ({
                   href="https://instagram.com"
                   target="_blank"
                   rel="noreferrer"
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors lowercase"
                   onClick={(e) => e.stopPropagation()}
                 >
                   instagram
@@ -231,7 +232,7 @@ export const MorphingMenu: React.FC<Props> = ({
                   href="https://github.com"
                   target="_blank"
                   rel="noreferrer"
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors lowercase"
                   onClick={(e) => e.stopPropagation()}
                 >
                   github

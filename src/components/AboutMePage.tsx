@@ -23,7 +23,7 @@ import {
 } from 'react-icons/si';
 import { TbBrandAdobePhotoshop, TbBrandAdobeIllustrator } from 'react-icons/tb';
 import { Language, Project } from '../types';
-import { PROJECTS_DATA } from '../data/portfolioData';
+import { getProjectsData, getPhilosophyData, TRANSLATIONS } from '../data/portfolioData';
 import { ScrollReveal } from './ScrollReveal';
 
 interface Props {
@@ -348,6 +348,9 @@ export const AboutMePage: React.FC<Props> = ({
   };
 
   const t = texts[lang] || texts.en;
+  const tMaster = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  const projects = getProjectsData(lang);
+  const philosophy = getPhilosophyData(lang);
 
   // Professional tech stack icon pack using react-icons
   const techLogos = [
@@ -493,62 +496,25 @@ export const AboutMePage: React.FC<Props> = ({
             <div className="md:col-span-8 space-y-6">
               <ScrollReveal delay={100} distance={20}>
                 <div className="space-y-6">
-                  {/* Work 1: zylo */}
-                  <div 
-                    onClick={() => {
-                      const proj = PROJECTS_DATA.find(p => p.id === 'zylo');
-                      if (proj && onSelectProject) onSelectProject(proj);
-                    }}
-                    className="border-b border-zinc-200 pb-5 space-y-1 group cursor-pointer hover:bg-zinc-100/50 p-2 -mx-2 rounded transition-colors"
-                  >
-                    <div className="flex gap-4 items-baseline">
-                      <span className="font-mono-code text-[11px] text-zinc-400">01</span>
-                      <h3 className="text-xs sm:text-[14px] font-bold tracking-tight text-zinc-900 group-hover:underline lowercase">
-                        zylo | high-performance website hosting & cloud platform
-                      </h3>
+                  {projects.slice(0, 3).map((proj, idx) => (
+                    <div
+                      key={proj.id}
+                      onClick={() => {
+                        if (onSelectProject) onSelectProject(proj);
+                      }}
+                      className="border-b border-zinc-200 pb-5 space-y-1 group cursor-pointer hover:bg-zinc-100/50 p-2 -mx-2 rounded transition-colors"
+                    >
+                      <div className="flex gap-4 items-baseline">
+                        <span className="font-mono-code text-[11px] text-zinc-400">0{idx + 1}</span>
+                        <h3 className="text-xs sm:text-[14px] font-bold tracking-tight text-zinc-900 group-hover:underline lowercase">
+                          {proj.title}
+                        </h3>
+                      </div>
+                      <div className="pl-8 text-[11px] text-zinc-400 font-mono-code lowercase">
+                        {proj.type}
+                      </div>
                     </div>
-                    <div className="pl-8 text-[11px] text-zinc-400 font-mono-code lowercase">
-                      cloud web hosting & server infrastructure (founder)
-                    </div>
-                  </div>
-
-                  {/* Work 2: trufin */}
-                  <div 
-                    onClick={() => {
-                      const proj = PROJECTS_DATA.find(p => p.id === 'trufin');
-                      if (proj && onSelectProject) onSelectProject(proj);
-                    }}
-                    className="border-b border-zinc-200 pb-5 space-y-1 group cursor-pointer hover:bg-zinc-100/50 p-2 -mx-2 rounded transition-colors"
-                  >
-                    <div className="flex gap-4 items-baseline">
-                      <span className="font-mono-code text-[11px] text-zinc-400">02</span>
-                      <h3 className="text-xs sm:text-[14px] font-bold tracking-tight text-zinc-900 group-hover:underline lowercase">
-                        trufin | financial institution & pinjol verification platform
-                      </h3>
-                    </div>
-                    <div className="pl-8 text-[11px] text-zinc-400 font-mono-code lowercase">
-                      fintech security & verification web platform
-                    </div>
-                  </div>
-
-                  {/* Work 3: krigstudio */}
-                  <div 
-                    onClick={() => {
-                      const proj = PROJECTS_DATA.find(p => p.id === 'krigstudio');
-                      if (proj && onSelectProject) onSelectProject(proj);
-                    }}
-                    className="border-b border-zinc-200 pb-5 space-y-1 group cursor-pointer hover:bg-zinc-100/50 p-2 -mx-2 rounded transition-colors"
-                  >
-                    <div className="flex gap-4 items-baseline">
-                      <span className="font-mono-code text-[11px] text-zinc-400">03</span>
-                      <h3 className="text-xs sm:text-[14px] font-bold tracking-tight text-zinc-900 group-hover:underline lowercase">
-                        krigstudio | digital invitation creator & event website builder
-                      </h3>
-                    </div>
-                    <div className="pl-8 text-[11px] text-zinc-400 font-mono-code lowercase">
-                      digital invitation creator & event platform
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </ScrollReveal>
 
@@ -915,39 +881,34 @@ export const AboutMePage: React.FC<Props> = ({
         <div className="pt-16 border-t border-zinc-200/60">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div className="md:col-span-3 font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
-              [thought]
+              {tMaster.thoughtLabel}
             </div>
             <div className="md:col-span-9 space-y-6">
               <ScrollReveal delay={100} distance={20}>
                 <div className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed max-w-xl lowercase">
-                  an interface is born not from pixels, but from decisions. i let go of the needless and leave only meaning behind.
+                  {tMaster.thoughtIntro}
                 </div>
               </ScrollReveal>
 
               <div className="space-y-4 pt-4 border-t border-zinc-200/40">
-                <div className="border-b border-zinc-200/20 pb-4">
-                  <div className="flex items-baseline gap-4">
-                    <span className="text-xs font-mono-code text-zinc-400">01</span>
-                    <span className="text-sm font-bold text-zinc-900 lowercase">aesthetics</span>
+                {philosophy.map((item, index) => (
+                  <div
+                    key={item.number}
+                    className={`border-b border-zinc-200/20 pb-4 ${
+                      index > 0 ? 'opacity-60 hover:opacity-100 transition-opacity' : ''
+                    }`}
+                  >
+                    <div className="flex items-baseline gap-4">
+                      <span className="text-xs font-mono-code text-zinc-400">{item.number}</span>
+                      <span className="text-sm font-bold text-zinc-900 lowercase">{item.title}</span>
+                    </div>
+                    {index === 0 && (
+                      <p className="text-xs text-zinc-500 italic mt-1.5 pl-8 max-w-lg lowercase">
+                        {item.headline}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-xs text-zinc-500 italic mt-1.5 pl-8 max-w-lg lowercase">
-                    beauty comes not from adding, but from taking away. let only what is needed remain.
-                  </p>
-                </div>
-
-                <div className="border-b border-zinc-200/20 pb-4 opacity-50 hover:opacity-100 transition-opacity">
-                  <div className="flex items-baseline gap-4">
-                    <span className="text-xs font-mono-code text-zinc-400">02</span>
-                    <span className="text-sm font-bold text-zinc-900 lowercase">entropy</span>
-                  </div>
-                </div>
-
-                <div className="border-b border-zinc-200/20 pb-4 opacity-50 hover:opacity-100 transition-opacity">
-                  <div className="flex items-baseline gap-4">
-                    <span className="text-xs font-mono-code text-zinc-400">03</span>
-                    <span className="text-sm font-bold text-zinc-900 lowercase">rationality</span>
-                  </div>
-                </div>
+                ))}
               </div>
 
               {onOpenThoughts && (
@@ -957,7 +918,7 @@ export const AboutMePage: React.FC<Props> = ({
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-300 hover:border-black text-[11px] font-mono-code text-zinc-600 hover:text-black transition-all cursor-pointer lowercase"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-zinc-900"></span>
-                    <span>read how i think</span>
+                    <span>{tMaster.readHowIThink}</span>
                   </button>
                 </div>
               )}
