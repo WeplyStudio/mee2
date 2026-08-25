@@ -167,34 +167,12 @@ export const MorphingMenu: React.FC<Props> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleNav(() => onScrollTo('faq'));
-                }}
-                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer"
-              >
-                faq
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
                   handleNav(onOpenContact);
                 }}
                 className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer"
               >
                 get in touch
               </button>
-
-              {onOpen404 && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleNav(onOpen404);
-                  }}
-                  className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300/70 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer"
-                >
-                  404
-                </button>
-              )}
             </div>
 
             {/* Language Switcher Row */}

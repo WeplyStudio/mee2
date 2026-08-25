@@ -27,7 +27,6 @@ export default function App() {
   const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
   const [expandedThought, setExpandedThought] = useState<string>('01');
   const [expandedService, setExpandedService] = useState<string>('01');
-  const [expandedFaq, setExpandedFaq] = useState<string>('01');
   const [activeProject, setActiveProject] = useState<Project | null>(null);
 
   // Modals state
@@ -607,96 +606,6 @@ export default function App() {
                   </div>
                 </ScrollReveal>
               ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------- */}
-      {/* FAQ SECTION */}
-      {/* ------------------------------------------------------------- */}
-      <section id="faq" className="py-20 sm:py-28 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
-          <div className="md:col-span-4 space-y-3">
-            <ScrollReveal delay={100} distance={20}>
-              <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400">
-                {t.faqLabel}
-              </div>
-            </ScrollReveal>
-          </div>
-
-          <div className="md:col-span-8 space-y-8">
-            <ScrollReveal delay={150} distance={25}>
-              <p className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed max-w-xl">
-                {t.faqIntro}
-              </p>
-            </ScrollReveal>
-
-            <div className="space-y-4 pt-4 border-t border-zinc-200/60">
-              {FAQ_DATA.map((faqItem, idx) => {
-                const isExpanded = expandedFaq === faqItem.number;
-                return (
-                  <ScrollReveal key={faqItem.number} delay={idx * 80} distance={25}>
-                    <div className="border-b border-zinc-100 pb-4 transition-colors">
-                      <button
-                        onClick={() => setExpandedFaq(isExpanded ? '' : faqItem.number)}
-                        className="flex items-baseline justify-between w-full text-left group cursor-pointer py-1"
-                        aria-expanded={isExpanded}
-                      >
-                        <div className="flex items-baseline gap-4">
-                          <span className={`text-xs sm:text-[13px] font-mono-code transition-colors duration-300 ${
-                            isExpanded ? 'text-zinc-900 font-semibold' : 'text-zinc-400 group-hover:text-zinc-800'
-                          }`}>
-                            {faqItem.number}
-                          </span>
-                          <span className={`text-base sm:text-lg font-bold tracking-tight lowercase transition-all duration-300 ${
-                            isExpanded ? 'text-black translate-x-1' : 'text-zinc-800 group-hover:text-black group-hover:translate-x-0.5'
-                          }`}>
-                            {faqItem.question}
-                          </span>
-                        </div>
-                        <span className={`text-xs font-mono-code transition-transform duration-300 text-zinc-400 ${
-                          isExpanded ? 'rotate-90 text-zinc-900 font-bold' : ''
-                        }`}>
-                          [+]
-                        </span>
-                      </button>
-
-                      {/* Smooth CSS Grid Accordion Transition */}
-                      <div
-                        className="grid transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden"
-                        style={{
-                          gridTemplateRows: isExpanded ? '1fr' : '0fr',
-                          opacity: isExpanded ? 1 : 0,
-                        }}
-                      >
-                        <div className="min-h-0 pl-8 sm:pl-9 space-y-3 pt-2">
-                          <p className={`text-xs sm:text-[12.5px] text-zinc-600 leading-relaxed transition-all duration-500 delay-75 ${
-                            isExpanded ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
-                          }`}>
-                            {faqItem.answer}
-                          </p>
-
-                          {faqItem.tags && (
-                            <div className={`flex flex-wrap gap-1.5 pt-1 transition-all duration-500 delay-100 ${
-                              isExpanded ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
-                            }`}>
-                              {faqItem.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="text-[10px] font-mono-code text-zinc-400 lowercase"
-                                >
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </ScrollReveal>
-                );
-              })}
             </div>
           </div>
         </div>

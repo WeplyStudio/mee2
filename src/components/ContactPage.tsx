@@ -243,10 +243,10 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
           <div className="flex items-center gap-4">
             <span className="text-zinc-400 lowercase">[contact]</span>
             <a
-              href="mailto:ynsmrkrkmzz@gmail.com"
+              href="mailto:hello@itsjason.my.id"
               className="text-zinc-800 hover:text-black transition-colors font-medium lowercase"
             >
-              ynsmrkrkmzz@gmail.com
+              hello@itsjason.my.id
             </a>
           </div>
 

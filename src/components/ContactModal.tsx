@@ -19,7 +19,7 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
 
   if (!isOpen) return null;
 
-  const emailAddress = 'stewardjasonliuwindra@example.com';
+  const emailAddress = 'hello@itsjason.my.id';
 
   const handleCopy = () => {
     navigator.clipboard.writeText(emailAddress);
