@@ -118,6 +118,17 @@ export const Footer: React.FC<FooterProps> = ({
                     </button>
                   </li>
                 )}
+                {onScrollToFaq && (
+                  <li>
+                    <button
+                      onClick={onScrollToFaq}
+                      className="hover:text-black hover:translate-x-1 transition-all duration-200 cursor-pointer lowercase flex items-center gap-1.5"
+                    >
+                      <span className="w-1 h-1 rounded-full bg-zinc-300 group-hover:bg-zinc-800"></span>
+                      <span>{t.faq}</span>
+                    </button>
+                  </li>
+                )}
               </ul>
             </ScrollReveal>
           </div>

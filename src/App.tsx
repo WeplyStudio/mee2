@@ -27,6 +27,7 @@ export default function App() {
   const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
   const [expandedThought, setExpandedThought] = useState<string>('01');
   const [expandedService, setExpandedService] = useState<string>('01');
+  const [expandedFaq, setExpandedFaq] = useState<string>('01');
   const [activeProject, setActiveProject] = useState<Project | null>(null);
 
   // Modals state
@@ -39,24 +40,48 @@ export default function App() {
     setupGlobalUISFX();
   }, []);
 
-  // Hash and Path route listener
+  // Safe navigation helper that updates both React state and browser history
+  const navigateTo = (page: 'home' | 'aboutme' | 'projects' | 'contact' | 'project-detail' | '404', targetPath?: string) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+      const path = targetPath || (page === 'home' ? '/' : `/${page}`);
+      if (window.location.pathname !== path) {
+        window.history.pushState({ page }, '', path);
+      }
+    } catch {
+      // In case pushState is restricted
+    }
+  };
+
+  // Hash, Path and Popstate route listener (Supports direct links, Vercel SPA rewrites, and 404 fallback)
   useEffect(() => {
     const handleRoute = () => {
-      const hash = window.location.hash.toLowerCase().replace('#', '');
-      const path = window.location.pathname.toLowerCase();
-      if (hash === '404' || path === '/404') {
-        setCurrentPage('404');
-      } else if (hash === 'aboutme' || path === '/aboutme') {
+      const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '').trim();
+      const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
+
+      if (rawPath === '/aboutme' || hash === 'aboutme') {
         setCurrentPage('aboutme');
-      } else if (hash === 'projects' || path === '/projects') {
+      } else if (rawPath === '/projects' || hash === 'projects') {
         setCurrentPage('projects');
-      } else if (hash === 'contact' || path === '/contact') {
+      } else if (rawPath === '/contact' || hash === 'contact') {
         setCurrentPage('contact');
+      } else if (rawPath === '/404' || hash === '404') {
+        setCurrentPage('404');
+      } else if (rawPath === '/' || rawPath === '' || hash === 'home' || hash === '') {
+        setCurrentPage('home');
+      } else {
+        // Any unknown URL path / hash (e.g. /unknown-page, /blog, /dashboard) -> show 404
+        setCurrentPage('404');
       }
     };
     handleRoute();
     window.addEventListener('hashchange', handleRoute);
-    return () => window.removeEventListener('hashchange', handleRoute);
+    window.addEventListener('popstate', handleRoute);
+    return () => {
+      window.removeEventListener('hashchange', handleRoute);
+      window.removeEventListener('popstate', handleRoute);
+    };
   }, []);
 
   const lenisRef = useRef<Lenis | null>(null);
@@ -155,8 +180,7 @@ export default function App() {
         <button
           onClick={() => {
             uiSfx.playSwitch();
-            setCurrentPage('contact');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            navigateTo('contact');
           }}
           className="hidden sm:inline-flex pointer-events-auto group items-center gap-2 text-xs sm:text-[13px] font-medium text-zinc-800 hover:text-black transition-all cursor-pointer"
         >
@@ -173,25 +197,22 @@ export default function App() {
           isAudioPlaying={isAudioPlaying}
           onToggleAudio={toggleSound}
           onOpenContact={() => {
-            setCurrentPage('contact');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            navigateTo('contact');
             setIsMenuOpen(false);
           }}
           onOpenStory={() => {
-            setCurrentPage('aboutme');
+            navigateTo('aboutme');
             setIsMenuOpen(false);
           }}
           onOpen404={() => {
-            setCurrentPage('404');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            navigateTo('404');
             setIsMenuOpen(false);
           }}
           onScrollTo={(id) => {
             if (id === 'projects') {
-              setCurrentPage('projects');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              navigateTo('projects');
             } else {
-              setCurrentPage('home');
+              navigateTo('home');
               setTimeout(() => {
                 scrollToSection(id);
               }, 100);
@@ -612,6 +633,99 @@ export default function App() {
       </section>
 
       {/* ------------------------------------------------------------- */}
+      {/* FAQ SECTION */}
+      {/* ------------------------------------------------------------- */}
+      <section id="faq" className="py-20 sm:py-28 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
+          <div className="md:col-span-4 space-y-3">
+            <ScrollReveal delay={100} distance={20}>
+              <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400">
+                {t.faqLabel}
+              </div>
+            </ScrollReveal>
+          </div>
+
+          <div className="md:col-span-8 space-y-8">
+            <ScrollReveal delay={150} distance={25}>
+              <p className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed max-w-xl">
+                {t.faqIntro}
+              </p>
+            </ScrollReveal>
+
+            <div className="space-y-4 pt-4 border-t border-zinc-200/60">
+              {FAQ_DATA.map((faqItem, idx) => {
+                const isExpanded = expandedFaq === faqItem.number;
+                return (
+                  <ScrollReveal key={faqItem.number} delay={idx * 80} distance={25}>
+                    <div className="border-b border-zinc-100 pb-4 transition-colors">
+                      <button
+                        onClick={() => {
+                          uiSfx.playPop();
+                          setExpandedFaq(isExpanded ? '' : faqItem.number);
+                        }}
+                        className="flex items-baseline justify-between w-full text-left group cursor-pointer py-1"
+                        aria-expanded={isExpanded}
+                      >
+                        <div className="flex items-baseline gap-4">
+                          <span className={`text-xs sm:text-[13px] font-mono-code transition-colors duration-300 ${
+                            isExpanded ? 'text-zinc-900 font-semibold' : 'text-zinc-400 group-hover:text-zinc-800'
+                          }`}>
+                            {faqItem.number}
+                          </span>
+                          <span className={`text-base sm:text-lg font-bold tracking-tight lowercase transition-all duration-300 ${
+                            isExpanded ? 'text-black translate-x-1' : 'text-zinc-800 group-hover:text-black group-hover:translate-x-0.5'
+                          }`}>
+                            {faqItem.question}
+                          </span>
+                        </div>
+                        <span className={`text-xs font-mono-code transition-transform duration-300 text-zinc-400 ${
+                          isExpanded ? 'rotate-90 text-zinc-900 font-bold' : ''
+                        }`}>
+                          [+]
+                        </span>
+                      </button>
+
+                      {/* Smooth CSS Grid Accordion Transition */}
+                      <div
+                        className="grid transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden"
+                        style={{
+                          gridTemplateRows: isExpanded ? '1fr' : '0fr',
+                          opacity: isExpanded ? 1 : 0,
+                        }}
+                      >
+                        <div className="min-h-0 pl-8 sm:pl-9 space-y-3 pt-2">
+                          <p className={`text-xs sm:text-[12.5px] text-zinc-600 leading-relaxed transition-all duration-500 delay-75 ${
+                            isExpanded ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
+                          }`}>
+                            {faqItem.answer}
+                          </p>
+
+                          {faqItem.tags && (
+                            <div className={`flex flex-wrap gap-1.5 pt-1 transition-all duration-500 delay-100 ${
+                              isExpanded ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
+                            }`}>
+                              {faqItem.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="text-[10px] font-mono-code text-zinc-400 lowercase"
+                                >
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </ScrollReveal>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------- */}
       {/* CALL TO ACTION SECTION */}
       {/* ------------------------------------------------------------- */}
       <section className="py-28 sm:py-36 px-6 text-center max-w-xl mx-auto space-y-6">
@@ -632,8 +746,7 @@ export default function App() {
             <button
               onClick={() => {
                 uiSfx.playSwitch();
-                setCurrentPage('contact');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                navigateTo('contact');
               }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-300 hover:border-zinc-900 bg-white hover:bg-zinc-50 text-zinc-800 hover:text-black text-xs font-medium transition-all shadow-xs active:scale-95 cursor-pointer"
             >
@@ -648,38 +761,31 @@ export default function App() {
     <AboutMePage
       lang={lang}
       onBack={() => {
-        setCurrentPage('home');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateTo('home');
       }}
       onOpenContact={() => {
-        setCurrentPage('contact');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateTo('contact');
       }}
       onSeeAllProjects={() => {
-        setCurrentPage('projects');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateTo('projects');
       }}
       onSelectProject={(project) => {
         setActiveProject(project);
-        setCurrentPage('project-detail');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateTo('project-detail');
       }}
     />
   ) : currentPage === 'projects' ? (
     <ProjectsPage
       lang={lang}
       onBack={() => {
-        setCurrentPage('home');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateTo('home');
       }}
       onOpenContact={() => {
-        setCurrentPage('contact');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateTo('contact');
       }}
       onSelectProject={(project) => {
         setActiveProject(project);
-        setCurrentPage('project-detail');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateTo('project-detail');
       }}
     />
   ) : currentPage === 'project-detail' && activeProject ? (
@@ -687,12 +793,10 @@ export default function App() {
       project={activeProject}
       lang={lang}
       onBack={() => {
-        setCurrentPage('projects');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateTo('projects');
       }}
       onOpenContact={() => {
-        setCurrentPage('contact');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateTo('contact');
       }}
       onSelectProject={(project) => {
         setActiveProject(project);
@@ -704,16 +808,14 @@ export default function App() {
     <NotFoundPage
       lang={lang}
       onNavigateHome={() => {
-        setCurrentPage('home');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateTo('home');
       }}
     />
   ) : (
     <ContactPage
       lang={lang}
       onNavigateHome={() => {
-        setCurrentPage('home');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateTo('home');
       }}
     />
   )}
@@ -726,32 +828,20 @@ export default function App() {
         footerProgress={footerProgress}
         lang={lang}
         onNavigateHome={() => {
-          if (currentPage !== 'home') {
-            setCurrentPage('home');
-          }
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          navigateTo('home');
         }}
         onNavigateAboutMe={() => {
-          if (currentPage !== 'aboutme') {
-            setCurrentPage('aboutme');
-          }
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          navigateTo('aboutme');
         }}
         onOpenContact={() => {
-          if (currentPage !== 'contact') {
-            setCurrentPage('contact');
-          }
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          navigateTo('contact');
         }}
         onScrollToProjects={() => {
-          if (currentPage !== 'projects') {
-            setCurrentPage('projects');
-          }
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          navigateTo('projects');
         }}
         onScrollToServices={() => {
           if (currentPage !== 'home') {
-            setCurrentPage('home');
+            navigateTo('home');
             setTimeout(() => {
               scrollToSection('services');
             }, 120);
@@ -761,7 +851,7 @@ export default function App() {
         }}
         onScrollToFaq={() => {
           if (currentPage !== 'home') {
-            setCurrentPage('home');
+            navigateTo('home');
             setTimeout(() => {
               scrollToSection('faq');
             }, 120);
