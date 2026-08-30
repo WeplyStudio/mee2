@@ -185,16 +185,48 @@ export function setupGlobalUISFX() {
 }
 
 /**
- * Web Audio API Ambient Soundscape Generator
- * Produces a warm, minimal, relaxing drone/pad with subtle harmonic movement.
+ * Audio Engine: Custom Background Music Player (/backsound.mp3) with ambient fallback.
+ * Automatically loops, applies smooth audio ramp (fade-in / fade-out), and persists playback state.
  */
 class AmbientSoundscape {
-  private ctx: AudioContext | null = null;
+  private audio: HTMLAudioElement | null = null;
   private isPlaying: boolean = false;
+  private targetVolume: number = 0.55;
+  private fadeInterval: number | null = null;
+
+  // Web Audio fallback if backsound.mp3 is unavailable
+  private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private oscillators: OscillatorNode[] = [];
   private filter: BiquadFilterNode | null = null;
   private lfo: OscillatorNode | null = null;
+  private isUsingSynthFallback: boolean = false;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      this.initAudioElement();
+    }
+  }
+
+  private initAudioElement() {
+    if (this.audio) return;
+    try {
+      this.audio = new Audio('/backsound.mp3');
+      this.audio.loop = true;
+      this.audio.preload = 'auto';
+      this.audio.volume = 0;
+
+      this.audio.addEventListener('error', () => {
+        // If backsound.mp3 is not yet uploaded or fails to load, fallback to synth drone
+        if (this.isPlaying && !this.isUsingSynthFallback) {
+          this.isUsingSynthFallback = true;
+          this.startSynth();
+        }
+      });
+    } catch {
+      // Audio element initialization fallback
+    }
+  }
 
   public toggle(): boolean {
     if (this.isPlaying) {
@@ -211,6 +243,97 @@ class AmbientSoundscape {
   }
 
   private start() {
+    this.isPlaying = true;
+    this.initAudioElement();
+
+    if (this.audio) {
+      // Always reset and attempt to play backsound.mp3
+      this.audio.volume = 0;
+      const playPromise = this.audio.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            this.isUsingSynthFallback = false;
+            this.fadeInAudio();
+          })
+          .catch(() => {
+            // If play was rejected (e.g. file not found or autoplay block), fallback to synth
+            this.isUsingSynthFallback = true;
+            this.startSynth();
+          });
+      } else {
+        this.fadeInAudio();
+      }
+    } else {
+      this.isUsingSynthFallback = true;
+      this.startSynth();
+    }
+  }
+
+  private fadeInAudio() {
+    if (!this.audio) return;
+    if (this.fadeInterval) clearInterval(this.fadeInterval);
+
+    let currentVol = this.audio.volume;
+    const step = 0.05;
+    const intervalTime = 40; // ~450ms smooth fade-in
+
+    this.fadeInterval = window.setInterval(() => {
+      if (!this.audio) {
+        if (this.fadeInterval) clearInterval(this.fadeInterval);
+        return;
+      }
+      currentVol = Math.min(this.targetVolume, currentVol + step);
+      this.audio.volume = currentVol;
+
+      if (currentVol >= this.targetVolume) {
+        if (this.fadeInterval) clearInterval(this.fadeInterval);
+      }
+    }, intervalTime);
+  }
+
+  private fadeOutAudio(onComplete?: () => void) {
+    if (!this.audio) {
+      onComplete?.();
+      return;
+    }
+    if (this.fadeInterval) clearInterval(this.fadeInterval);
+
+    let currentVol = this.audio.volume;
+    const step = 0.08;
+    const intervalTime = 30; // ~200ms quick fade-out
+
+    this.fadeInterval = window.setInterval(() => {
+      if (!this.audio) {
+        if (this.fadeInterval) clearInterval(this.fadeInterval);
+        onComplete?.();
+        return;
+      }
+      currentVol = Math.max(0, currentVol - step);
+      this.audio.volume = currentVol;
+
+      if (currentVol <= 0.01) {
+        if (this.fadeInterval) clearInterval(this.fadeInterval);
+        this.audio.pause();
+        this.audio.currentTime = 0;
+        onComplete?.();
+      }
+    }, intervalTime);
+  }
+
+  private stop() {
+    this.isPlaying = false;
+
+    if (this.isUsingSynthFallback) {
+      this.stopSynth();
+    } else if (this.audio) {
+      this.fadeOutAudio();
+    }
+  }
+
+  // Synth Fallback Methods
+  private startSynth() {
     try {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new AudioCtx();
@@ -221,14 +344,13 @@ class AmbientSoundscape {
 
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.setValueAtTime(0.001, this.ctx.currentTime);
-      this.masterGain.gain.exponentialRampToValueAtTime(0.12, this.ctx.currentTime + 2.5);
+      this.masterGain.gain.exponentialRampToValueAtTime(0.12, this.ctx.currentTime + 1.8);
 
       this.filter = this.ctx.createBiquadFilter();
       this.filter.type = 'lowpass';
       this.filter.frequency.setValueAtTime(420, this.ctx.currentTime);
       this.filter.Q.setValueAtTime(2.5, this.ctx.currentTime);
 
-      // Low frequency modulation for organic breathing
       this.lfo = this.ctx.createOscillator();
       const lfoGain = this.ctx.createGain();
       this.lfo.frequency.setValueAtTime(0.15, this.ctx.currentTime);
@@ -237,14 +359,12 @@ class AmbientSoundscape {
       lfoGain.connect(this.filter.frequency);
       this.lfo.start();
 
-      // Ambient warm chord frequencies (Dmaj9 warm chord voicing: D2, A2, F#3, C#4, E4)
       const chord = [73.42, 110.00, 185.00, 277.18, 329.63];
 
       this.oscillators = chord.map((freq, i) => {
         const osc = this.ctx!.createOscillator();
         const oscGain = this.ctx!.createGain();
 
-        // Slight detune for analog warmth
         osc.type = i % 2 === 0 ? 'sine' : 'triangle';
         osc.frequency.setValueAtTime(freq + (Math.random() * 0.4 - 0.2), this.ctx!.currentTime);
 
@@ -259,36 +379,37 @@ class AmbientSoundscape {
 
       this.filter.connect(this.masterGain);
       this.masterGain.connect(this.ctx.destination);
-      this.isPlaying = true;
-    } catch (e) {
-      console.warn('AudioContext not allowed or failed:', e);
-      this.isPlaying = false;
+    } catch {
+      // Audio context failure
     }
   }
 
-  private stop() {
+  private stopSynth() {
     if (!this.ctx || !this.masterGain) return;
     try {
       this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
       this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, this.ctx.currentTime);
-      this.masterGain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 1.2);
+      this.masterGain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.8);
 
       setTimeout(() => {
-        this.oscillators.forEach(osc => {
-          try { osc.stop(); osc.disconnect(); } catch { }
+        this.oscillators.forEach((osc) => {
+          try {
+            osc.stop();
+            osc.disconnect();
+          } catch {}
         });
         if (this.lfo) {
-          try { this.lfo.stop(); this.lfo.disconnect(); } catch { }
+          try {
+            this.lfo.stop();
+            this.lfo.disconnect();
+          } catch {}
         }
         if (this.ctx && this.ctx.state !== 'closed') {
           this.ctx.close();
         }
         this.ctx = null;
-        this.isPlaying = false;
-      }, 1200);
-    } catch {
-      this.isPlaying = false;
-    }
+      }, 850);
+    } catch {}
   }
 }
 

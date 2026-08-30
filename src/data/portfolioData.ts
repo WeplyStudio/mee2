@@ -48,7 +48,7 @@ export const PROJECTS_BY_LANG: Record<Language, Project[]> = {
         { label: 'Situs Aktif', value: '10,000+' }
       ],
       imageType: 'zylo',
-      imageUrl: '/zylo.png',
+      imageUrl: '/zylo.webp',
       liveUrl: 'https://zylo.ai',
       accentColor: '#6366f1',
       nextProjectId: 'trufin',
@@ -100,7 +100,7 @@ export const PROJECTS_BY_LANG: Record<Language, Project[]> = {
         { label: 'Entitas Ditandai', value: '50k+' }
       ],
       imageType: 'trufin',
-      imageUrl: '/trufin.png',
+      imageUrl: '/trufin.webp',
       liveUrl: 'https://trufin.io',
       accentColor: '#10b981',
       nextProjectId: 'krigstudio',
@@ -152,7 +152,7 @@ export const PROJECTS_BY_LANG: Record<Language, Project[]> = {
         { label: 'Acara Terlaksana', value: '500+' }
       ],
       imageType: 'krigstudio',
-      imageUrl: '/krigstudio.png',
+      imageUrl: '/krigstudio.webp',
       liveUrl: 'https://krigstudio.com',
       accentColor: '#09090b',
       nextProjectId: 'zylo',
@@ -206,7 +206,7 @@ export const PROJECTS_BY_LANG: Record<Language, Project[]> = {
         { label: 'Active Sites', value: '10,000+' }
       ],
       imageType: 'zylo',
-      imageUrl: '/zylo.png',
+      imageUrl: '/zylo.webp',
       liveUrl: 'https://zylo.ai',
       accentColor: '#6366f1',
       nextProjectId: 'trufin',
@@ -258,7 +258,7 @@ export const PROJECTS_BY_LANG: Record<Language, Project[]> = {
         { label: 'Flagged Entities', value: '50k+' }
       ],
       imageType: 'trufin',
-      imageUrl: '/trufin.png',
+      imageUrl: '/trufin.webp',
       liveUrl: 'https://trufin.io',
       accentColor: '#10b981',
       nextProjectId: 'krigstudio',
@@ -310,7 +310,7 @@ export const PROJECTS_BY_LANG: Record<Language, Project[]> = {
         { label: 'Events Hosted', value: '500+' }
       ],
       imageType: 'krigstudio',
-      imageUrl: '/krigstudio.png',
+      imageUrl: '/krigstudio.webp',
       liveUrl: 'https://krigstudio.com',
       accentColor: '#09090b',
       nextProjectId: 'zylo',
@@ -364,7 +364,7 @@ export const PROJECTS_BY_LANG: Record<Language, Project[]> = {
         { label: 'Aktive Sites', value: '10,000+' }
       ],
       imageType: 'zylo',
-      imageUrl: '/zylo.png',
+      imageUrl: '/zylo.webp',
       liveUrl: 'https://zylo.ai',
       accentColor: '#6366f1',
       nextProjectId: 'trufin',
@@ -416,7 +416,7 @@ export const PROJECTS_BY_LANG: Record<Language, Project[]> = {
         { label: 'Geflaggte Entitäten', value: '50k+' }
       ],
       imageType: 'trufin',
-      imageUrl: '/trufin.png',
+      imageUrl: '/trufin.webp',
       liveUrl: 'https://trufin.io',
       accentColor: '#10b981',
       nextProjectId: 'krigstudio',
@@ -468,7 +468,7 @@ export const PROJECTS_BY_LANG: Record<Language, Project[]> = {
         { label: 'Events Gehostet', value: '500+' }
       ],
       imageType: 'krigstudio',
-      imageUrl: '/krigstudio.png',
+      imageUrl: '/krigstudio.webp',
       liveUrl: 'https://krigstudio.com',
       accentColor: '#09090b',
       nextProjectId: 'zylo',
@@ -522,7 +522,7 @@ export const PROJECTS_BY_LANG: Record<Language, Project[]> = {
         { label: '稼働サイト数', value: '10,000+' }
       ],
       imageType: 'zylo',
-      imageUrl: '/zylo.png',
+      imageUrl: '/zylo.webp',
       liveUrl: 'https://zylo.ai',
       accentColor: '#6366f1',
       nextProjectId: 'trufin',
@@ -574,7 +574,7 @@ export const PROJECTS_BY_LANG: Record<Language, Project[]> = {
         { label: '検知事業者数', value: '50k+' }
       ],
       imageType: 'trufin',
-      imageUrl: '/trufin.png',
+      imageUrl: '/trufin.webp',
       liveUrl: 'https://trufin.io',
       accentColor: '#10b981',
       nextProjectId: 'krigstudio',
@@ -626,7 +626,7 @@ export const PROJECTS_BY_LANG: Record<Language, Project[]> = {
         { label: 'サポート実績', value: '500+' }
       ],
       imageType: 'krigstudio',
-      imageUrl: '/krigstudio.png',
+      imageUrl: '/krigstudio.webp',
       liveUrl: 'https://krigstudio.com',
       accentColor: '#09090b',
       nextProjectId: 'zylo',

@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ScrollReveal } from './ScrollReveal';
 import { Language } from '../types';
 import { TRANSLATIONS } from '../data/portfolioData';
 import { CheckCircle2, Loader2 } from 'lucide-react';
+import { sendTelegramNotification } from '../utils/telegram';
+import { AntiSpamCaptcha, CaptchaRef } from './AntiSpamCaptcha';
 
 interface ContactPageProps {
   lang: Language;
@@ -27,6 +29,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const captchaRef = useRef<CaptchaRef>(null);
 
   const localizedContent = {
     id: {
@@ -129,11 +132,29 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
 
   const c = localizedContent[lang] || localizedContent.en;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate anti-spam captcha before proceeding
+    if (captchaRef.current && !captchaRef.current.validate()) {
+      return;
+    }
+
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    try {
+      await sendTelegramNotification({
+        name: formData.name,
+        company: formData.company,
+        email: formData.email,
+        phone: formData.phone,
+        subject: formData.subject,
+        message: formData.message,
+        source: 'Full Contact Page (/contact)',
+      });
+    } catch {
+      // Handled gracefully
+    } finally {
       setIsSubmitting(false);
       setIsSuccess(true);
       setFormData({
@@ -144,7 +165,8 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
         subject: '',
         message: '',
       });
-    }, 1000);
+      captchaRef.current?.reset();
+    }
   };
 
   return (
@@ -299,9 +321,16 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
                 </div>
               </ScrollReveal>
 
+              {/* Anti-Spam Security Captcha */}
+              <ScrollReveal delay={320} distance={15}>
+                <div className="pt-2">
+                  <AntiSpamCaptcha ref={captchaRef} lang={lang} />
+                </div>
+              </ScrollReveal>
+
               {/* Purple pill button matching screenshot */}
-              <ScrollReveal delay={330} distance={15}>
-                <div className="pt-4">
+              <ScrollReveal delay={340} distance={15}>
+                <div className="pt-3">
                   <button
                     type="submit"
                     disabled={isSubmitting}

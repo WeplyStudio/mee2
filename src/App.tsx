@@ -17,9 +17,21 @@ import { ProjectDetailPage } from './components/ProjectDetailPage';
 import { NotFoundPage } from './components/NotFoundPage';
 import { AnimatedQuote } from './components/AnimatedQuote';
 import { ScrollReveal } from './components/ScrollReveal';
+import { ShutterRevealImage } from './components/ShutterRevealImage';
 import { Footer } from './components/Footer';
+import { CurtainBlindsTransition, BlindsTransitionStage } from './components/CurtainBlindsTransition';
 import { ambientSound, setupGlobalUISFX, uiSfx } from './utils/audio';
 import { Language, Project } from './types';
+
+type PageType = 'home' | 'aboutme' | 'projects' | 'contact' | 'project-detail' | '404';
+
+interface NavigationTarget {
+  page: PageType;
+  targetPath?: string;
+  project?: Project | null;
+  callback?: () => void;
+  skipHistory?: boolean;
+}
 
 export default function App() {
   const [lang, setLang] = useState<Language>('en');
@@ -31,27 +43,117 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<Project | null>(null);
 
   // Modals state
-  const [currentPage, setCurrentPage] = useState<'home' | 'aboutme' | 'projects' | 'contact' | 'project-detail' | '404'>('home');
+  const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+
+  // Blinds Curtain Transition State
+  const [blindsStage, setBlindsStage] = useState<BlindsTransitionStage>('idle');
+  const [transitionTitle, setTransitionTitle] = useState<string>('steward jason');
+  const pendingNavRef = useRef<NavigationTarget | null>(null);
+  const isTransitioningRef = useRef<boolean>(false);
+  const currentPageRef = useRef<PageType>('home');
+
+  useEffect(() => {
+    currentPageRef.current = currentPage;
+  }, [currentPage]);
 
   // Initialize uisfx global audio handlers
   useEffect(() => {
     setupGlobalUISFX();
   }, []);
 
-  // Safe navigation helper that updates both React state and browser history
-  const navigateTo = (page: 'home' | 'aboutme' | 'projects' | 'contact' | 'project-detail' | '404', targetPath?: string) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    try {
-      const path = targetPath || (page === 'home' ? '/' : `/${page}`);
-      if (window.location.pathname !== path) {
-        window.history.pushState({ page }, '', path);
+  const lenisRef = useRef<Lenis | null>(null);
+
+  // Motion Curtain Blinds safe navigation helper
+  const navigateTo = (
+    page: PageType,
+    targetPath?: string,
+    options?: { project?: Project | null; callback?: () => void; skipHistory?: boolean }
+  ) => {
+    // If already on the requested page with no project change or special callback, just scroll top
+    if (page === currentPageRef.current && !options?.project && !options?.callback) {
+      if (lenisRef.current) {
+        lenisRef.current.scrollTo(0, { duration: 1.2 });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-    } catch {
-      // In case pushState is restricted
+      return;
     }
+
+    // Set transition label for the blinds center indicator
+    let title = 'steward jason';
+    if (options?.project) {
+      title = options.project.title;
+    } else if (page === 'aboutme') {
+      title = 'about me';
+    } else if (page === 'projects') {
+      title = 'selected works';
+    } else if (page === 'contact') {
+      title = 'get in touch';
+    } else if (page === 'home') {
+      title = 'steward jason';
+    } else if (page === '404') {
+      title = '404 not found';
+    }
+    setTransitionTitle(title);
+
+    pendingNavRef.current = {
+      page,
+      targetPath,
+      project: options?.project,
+      callback: options?.callback,
+      skipHistory: options?.skipHistory,
+    };
+    isTransitioningRef.current = true;
+
+    try {
+      uiSfx.playSwitch();
+    } catch {}
+
+    // Trigger blinds closing animation across the screen
+    setBlindsStage('closing');
+  };
+
+  // Called when all curtain blinds have fully closed over the screen
+  const handleBlindsClosed = () => {
+    const pending = pendingNavRef.current;
+    if (pending) {
+      setCurrentPage(pending.page);
+      currentPageRef.current = pending.page;
+      if (pending.project !== undefined) {
+        setActiveProject(pending.project);
+      }
+      if (pending.callback) {
+        pending.callback();
+      }
+
+      // Reset scroll position instantaneously behind the curtains
+      if (lenisRef.current) {
+        lenisRef.current.scrollTo(0, { immediate: true });
+      }
+      window.scrollTo({ top: 0, behavior: 'instant' });
+
+      // Update browser history URL
+      if (!pending.skipHistory) {
+        try {
+          const path = pending.targetPath || (pending.page === 'home' ? '/' : `/${pending.page}`);
+          if (window.location.pathname !== path) {
+            window.history.pushState({ page: pending.page }, '', path);
+          }
+        } catch {}
+      }
+    }
+
+    // Uncover new page by opening the blinds downwards
+    setBlindsStage('opening');
+  };
+
+  // Called when all curtain blinds have fully opened and revealed the new page
+  const handleBlindsOpened = () => {
+    setBlindsStage('idle');
+    isTransitioningRef.current = false;
+    pendingNavRef.current = null;
   };
 
   // Hash, Path and Popstate route listener (Supports direct links, Vercel SPA rewrites, and 404 fallback)
@@ -60,22 +162,26 @@ export default function App() {
       const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '').trim();
       const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
 
+      let targetPage: PageType = 'home';
       if (rawPath === '/aboutme' || hash === 'aboutme') {
-        setCurrentPage('aboutme');
+        targetPage = 'aboutme';
       } else if (rawPath === '/projects' || hash === 'projects') {
-        setCurrentPage('projects');
+        targetPage = 'projects';
       } else if (rawPath === '/contact' || hash === 'contact') {
-        setCurrentPage('contact');
+        targetPage = 'contact';
       } else if (rawPath === '/404' || hash === '404') {
-        setCurrentPage('404');
+        targetPage = '404';
       } else if (rawPath === '/' || rawPath === '' || hash === 'home' || hash === '') {
-        setCurrentPage('home');
+        targetPage = 'home';
       } else {
-        // Any unknown URL path / hash (e.g. /unknown-page, /blog, /dashboard) -> show 404
-        setCurrentPage('404');
+        targetPage = '404';
+      }
+
+      if (targetPage !== currentPageRef.current) {
+        navigateTo(targetPage, undefined, { skipHistory: true });
       }
     };
-    handleRoute();
+
     window.addEventListener('hashchange', handleRoute);
     window.addEventListener('popstate', handleRoute);
     return () => {
@@ -83,8 +189,6 @@ export default function App() {
       window.removeEventListener('popstate', handleRoute);
     };
   }, []);
-
-  const lenisRef = useRef<Lenis | null>(null);
 
   // Initialize Ultra-Smooth Inertia Scrolling (Lenis)
   useEffect(() => {
@@ -259,9 +363,9 @@ export default function App() {
             {/* HERO SECTION */}
             {/* ------------------------------------------------------------- */}
             <section id="hero" className="relative pt-24 sm:pt-28 pb-16 overflow-hidden">
-        {/* Hero Top Metadata Row */}
+        {/* Hero Top Metadata Row (Aligned with center photo width) */}
         <ScrollReveal delay={100} distance={20}>
-          <div className="max-w-7xl mx-auto px-6 sm:px-12 flex justify-between items-center text-xs sm:text-[13px] text-zinc-400 font-mono-code mb-12 sm:mb-16">
+          <div className="w-64 sm:w-80 md:w-96 mx-auto px-0 flex justify-between items-center text-xs sm:text-[13px] text-zinc-400 font-mono-code mb-8 sm:mb-12">
             {/* Left: Real-time Clock */}
             <div className="flex items-center gap-2">
               <span className="text-zinc-500 font-mono-code">{timeStr || '15:44:46'}</span>
@@ -282,32 +386,33 @@ export default function App() {
         {/* Hero Portrait & Infinite Slide Text Container */}
         <div className="relative w-full flex flex-col items-center justify-center my-6 sm:my-10">
           
-          {/* GIANT INFINITE SLIDE MARQUEE TEXT */}
-          <div className="absolute w-full top-1/2 -translate-y-1/2 pointer-events-none select-none z-0 overflow-hidden opacity-95">
-            <div className="animate-marquee-infinite flex whitespace-nowrap text-[12vw] sm:text-[14vw] font-bold tracking-tighter text-[#111111] leading-none uppercase">
+          {/* Center Avatar Photo matching the reference */}
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-none bg-[#201d1c] overflow-hidden shadow-2xl relative group border border-zinc-900/10">
+              {/* Photo Image with scroll-triggered shutter reveal */}
+              <ShutterRevealImage
+                src="/profile-3.webp"
+                alt="Steward Jason Liuwindra"
+                fetchPriority="high"
+                decoding="async"
+                className="w-full h-full"
+                imgClassName="w-full h-full object-cover object-center grayscale contrast-115 group-hover:scale-105 transition-transform duration-700 ease-out"
+              />
+            </div>
+
+            {/* [steward jason liuwindra] caption */}
+            <div className="mt-4 text-[11px] sm:text-xs font-mono-code text-zinc-500 tracking-wide">
+              {t.nameBracket}
+            </div>
+          </div>
+
+          {/* GIANT INFINITE SLIDE MARQUEE TEXT (Overlays on top of photo with automatic color inversion) */}
+          <div className="absolute w-full top-[42%] sm:top-[44%] -translate-y-1/2 pointer-events-none select-none z-20 overflow-hidden mix-blend-difference">
+            <div className="animate-marquee-infinite flex whitespace-nowrap text-[13vw] sm:text-[14vw] font-bold tracking-tighter text-white leading-none uppercase">
               <span>{t.marqueeWord}</span>
               <span>{t.marqueeWord}</span>
             </div>
           </div>
-
-          {/* Center Avatar Photo matching the reference */}
-          <ScrollReveal delay={200} distance={35}>
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-none bg-[#201d1c] overflow-hidden shadow-2xl relative group border border-zinc-900/10">
-                {/* Photo Image */}
-                <img
-                  src="./profile-3.jpeg"
-                  alt="Steward Jason Liuwindra"
-                  className="w-full h-full object-cover object-center grayscale contrast-115 group-hover:scale-105 transition-transform duration-700 ease-out"
-                />
-              </div>
-
-              {/* [steward jason liuwindra] caption */}
-              <div className="mt-4 text-[11px] sm:text-xs font-mono-code text-zinc-500 tracking-wide">
-                {t.nameBracket}
-              </div>
-            </div>
-          </ScrollReveal>
         </div>
       </section>
 
@@ -328,15 +433,16 @@ export default function App() {
 
           {/* Center Column: Portrait Photo */}
           <div className="md:col-span-4 flex justify-center">
-            <ScrollReveal delay={200} distance={35}>
-              <div className="w-32 h-44 sm:w-36 sm:h-52 rounded-none bg-zinc-800 overflow-hidden shadow-lg border border-zinc-200">
-                <img
-                  src="./profile-2.jpeg"
-                  alt="Steward Jason Liuwindra selfie"
-                  className="w-full h-full object-cover grayscale contrast-125 hover:scale-105 transition-transform duration-700"
-                />
-              </div>
-            </ScrollReveal>
+            <div className="w-32 h-44 sm:w-36 sm:h-52 rounded-none bg-zinc-800 overflow-hidden shadow-lg border border-zinc-200">
+              <ShutterRevealImage
+                src="/profile-2.webp"
+                alt="Steward Jason Liuwindra selfie"
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full"
+                imgClassName="w-full h-full object-cover grayscale contrast-125 hover:scale-105 transition-transform duration-700"
+              />
+            </div>
           </div>
 
           {/* Right Column: Statement */}
@@ -352,7 +458,7 @@ export default function App() {
         {/* SCROLL-DRIVEN ANIMATED QUOTE WITH COLOR INTERPOLATION & SLIDE UP */}
         <AnimatedQuote
           text={t.quoteCenter}
-          onOpenStory={() => setCurrentPage('aboutme')}
+          onOpenStory={() => navigateTo('aboutme')}
           myStoryLabel={t.myStory}
         />
       </section>
@@ -367,9 +473,7 @@ export default function App() {
               <ScrollReveal key={project.id} delay={idx * 100} distance={30} className="h-full">
                 <div
                   onClick={() => {
-                    setActiveProject(project);
-                    setCurrentPage('project-detail');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    navigateTo('project-detail', undefined, { project });
                   }}
                   className={`group cursor-pointer flex flex-col justify-between h-full ${
                     idx < 2 ? 'md:border-r border-zinc-200' : ''
@@ -580,8 +684,7 @@ export default function App() {
               <div className="pt-4">
                 <button
                   onClick={() => {
-                    setCurrentPage('contact');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    navigateTo('contact');
                   }}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-300 hover:border-zinc-900 bg-white hover:bg-zinc-50 text-zinc-800 hover:text-black text-xs font-medium transition-all shadow-xs active:scale-95 cursor-pointer lowercase"
                 >
@@ -777,8 +880,7 @@ export default function App() {
         navigateTo('projects');
       }}
       onSelectProject={(project) => {
-        setActiveProject(project);
-        navigateTo('project-detail');
+        navigateTo('project-detail', undefined, { project });
       }}
     />
   ) : currentPage === 'projects' ? (
@@ -791,8 +893,7 @@ export default function App() {
         navigateTo('contact');
       }}
       onSelectProject={(project) => {
-        setActiveProject(project);
-        navigateTo('project-detail');
+        navigateTo('project-detail', undefined, { project });
       }}
     />
   ) : currentPage === 'project-detail' && localizedActiveProject ? (
@@ -806,8 +907,7 @@ export default function App() {
         navigateTo('contact');
       }}
       onSelectProject={(project) => {
-        setActiveProject(project);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateTo('project-detail', undefined, { project });
       }}
       allProjects={currentProjects}
     />
@@ -875,6 +975,16 @@ export default function App() {
         isOpen={isContactOpen}
         onClose={() => setIsContactOpen(false)}
         lang={lang}
+      />
+
+      {/* ------------------------------------------------------------- */}
+      {/* MOTION CURTAIN BLINDS PAGE TRANSITION OVERLAY */}
+      {/* ------------------------------------------------------------- */}
+      <CurtainBlindsTransition
+        stage={blindsStage}
+        targetPageName={transitionTitle}
+        onClosed={handleBlindsClosed}
+        onOpened={handleBlindsOpened}
       />
     </div>
   );

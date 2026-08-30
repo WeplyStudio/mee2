@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ShutterReveal } from './ShutterRevealImage';
 
 interface Props {
   type: 'zylo' | 'trufin' | 'krigstudio' | string;
@@ -8,23 +9,33 @@ interface Props {
 }
 
 const PROJECT_IMAGE_MAP: Record<string, string> = {
-  zylo: '/zylo.png',
-  trufin: '/trufin.png',
-  krigstudio: '/krigstudio.png',
+  zylo: '/zylo.webp',
+  trufin: '/trufin.webp',
+  krigstudio: '/krigstudio.webp',
 };
 
 export const ProjectMockup: React.FC<Props> = ({ type, className = '', variant = 'card', imageUrl }) => {
+  const [loaded, setLoaded] = useState(false);
   const projectImg = imageUrl || PROJECT_IMAGE_MAP[type];
 
   if (projectImg) {
     return (
-      <div className={`w-full h-full relative overflow-hidden bg-zinc-100 dark:bg-zinc-900 ${className}`}>
+      <ShutterReveal className={`w-full h-full relative overflow-hidden bg-zinc-200 dark:bg-zinc-800 ${className}`}>
+        {/* Skeleton pulse until loaded */}
+        {!loaded && (
+          <div className="absolute inset-0 bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+        )}
         <img 
           src={projectImg} 
-          alt={`${type} preview`} 
-          className="w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.03]" 
+          alt={`${type} preview`}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setLoaded(true)}
+          className={`w-full h-full object-cover object-top transition-all duration-500 ease-out group-hover:scale-[1.03] ${
+            loaded ? 'opacity-100' : 'opacity-0'
+          }`} 
         />
-      </div>
+      </ShutterReveal>
     );
   }
 

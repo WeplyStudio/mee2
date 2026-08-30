@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Send, Copy, Check, Mail, ArrowUpRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 import { Language } from '../types';
+import { sendTelegramNotification } from '../utils/telegram';
+import { AntiSpamCaptcha, CaptchaRef } from './AntiSpamCaptcha';
 
 interface Props {
   isOpen: boolean;
@@ -16,6 +18,7 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
+  const captchaRef = useRef<CaptchaRef>(null);
 
   if (!isOpen) return null;
 
@@ -29,7 +32,20 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (captchaRef.current && !captchaRef.current.validate()) {
+      return;
+    }
+
     setSent(true);
+
+    sendTelegramNotification({
+      name,
+      email,
+      message,
+      source: 'Quick Contact Modal',
+    });
+
     try {
       confetti({
         particleCount: 80,
@@ -224,6 +240,9 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
                 className="w-full px-3 py-2 text-xs sm:text-sm bg-zinc-50 border border-zinc-200 rounded-lg focus:outline-hidden focus:border-zinc-900 transition-colors resize-none"
               ></textarea>
             </div>
+
+            {/* Anti-Spam Captcha Challenge */}
+            <AntiSpamCaptcha ref={captchaRef} lang={lang} />
 
             <div className="flex items-center justify-between pt-2">
               <div className="flex items-center gap-3 text-xs text-zinc-500">

@@ -25,6 +25,7 @@ import { TbBrandAdobePhotoshop, TbBrandAdobeIllustrator } from 'react-icons/tb';
 import { Language, Project } from '../types';
 import { getProjectsData, getPhilosophyData, TRANSLATIONS } from '../data/portfolioData';
 import { ScrollReveal } from './ScrollReveal';
+import { ShutterRevealImage } from './ShutterRevealImage';
 
 interface Props {
   lang: Language;
@@ -382,12 +383,24 @@ export const AboutMePage: React.FC<Props> = ({
       
       <div className="space-y-20 sm:space-y-32">
         
-        {/* SECTION 1: EDITORIAL 3-PHOTO COLLAGE AS IN THE SCREENSHOT */}
-        <ScrollReveal delay={100} distance={30}>
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
-            {/* Column 1 (Left) */}
-            <div className="md:col-span-4 space-y-12">
-              <div className="space-y-4">
+        {/* SECTION 1: EDITORIAL 3-PHOTO COLLAGE AS IN THE SCREENSHOT & VIDEO */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
+          {/* Column 1 (Left) */}
+          <div className="md:col-span-4 space-y-8 flex flex-col justify-start">
+            {/* Top Left Photo */}
+            <div className="aspect-[3/4] w-full sm:w-[90%] overflow-hidden border border-zinc-200/50 shadow-md">
+              <ShutterRevealImage
+                src="/profile.webp"
+                alt="steward jason"
+                delay={0.05}
+                className="w-full h-full"
+                imgClassName="w-full h-full object-cover grayscale contrast-110 hover:scale-105 transition-transform duration-700"
+              />
+            </div>
+
+            {/* Typography statement below top-left photo */}
+            <ScrollReveal delay={120} distance={20}>
+              <div className="space-y-4 pt-1">
                 <h1 className="text-3xl sm:text-4xl font-normal tracking-tight text-[#111111] leading-tight">
                   i <span className="font-serif italic text-zinc-400 font-light">{t.trust}</span> my eye, not my hands.
                 </h1>
@@ -395,31 +408,35 @@ export const AboutMePage: React.FC<Props> = ({
                   {t.catchWhatMostSkip}
                 </p>
               </div>
-            </div>
+            </ScrollReveal>
+          </div>
 
-            {/* Column 2 (Middle) */}
-            <div className="md:col-span-4 flex flex-col justify-start">
-              <div className="aspect-[3/4] w-full sm:w-[90%] mx-auto md:-translate-y-20 overflow-hidden border border-zinc-200/50 shadow-md">
-                <img
-                  src="./profile-3.jpeg"
-                  alt="steward jason child"
-                  className="w-full h-full object-cover grayscale contrast-110 hover:scale-105 transition-transform duration-700"
-                />
-              </div>
-            </div>
-
-            {/* Column 3 (Right) - Hidden on mobile so only 1 image shows on mobile outside 'what i do' */}
-            <div className="hidden md:flex md:col-span-4 flex-col justify-start md:pt-40">
-              <div className="aspect-[3/4] w-full overflow-hidden border border-zinc-200/50 shadow-xs rotate-[-1.5deg] hover:rotate-0 transition-transform duration-700">
-                <img
-                  src="./profile-2.jpeg"
-                  alt="steward jason portrait"
-                  className="w-full h-full object-cover grayscale contrast-115 hover:scale-105 transition-transform duration-700"
-                />
-              </div>
+          {/* Column 2 (Middle) */}
+          <div className="md:col-span-4 flex flex-col justify-start md:pt-28">
+            <div className="aspect-[3/4] w-full sm:w-[90%] mx-auto overflow-hidden border border-zinc-200/50 shadow-md">
+              <ShutterRevealImage
+                src="/profile-3.webp"
+                alt="steward jason child"
+                delay={0.15}
+                className="w-full h-full"
+                imgClassName="w-full h-full object-cover grayscale contrast-110 hover:scale-105 transition-transform duration-700"
+              />
             </div>
           </div>
-        </ScrollReveal>
+
+          {/* Column 3 (Right) - Offset nicely on desktop */}
+          <div className="hidden md:flex md:col-span-4 flex-col justify-start md:pt-48">
+            <div className="aspect-[3/4] w-full overflow-hidden border border-zinc-200/50 shadow-xs rotate-[-1.5deg] hover:rotate-0 transition-transform duration-700">
+              <ShutterRevealImage
+                src="/profile-2.webp"
+                alt="steward jason portrait"
+                delay={0.25}
+                className="w-full h-full"
+                imgClassName="w-full h-full object-cover grayscale contrast-115 hover:scale-105 transition-transform duration-700"
+              />
+            </div>
+          </div>
+        </div>
 
         {/* SECTION 3: [who am i] */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start pt-10 border-t border-zinc-200/60">
@@ -444,10 +461,11 @@ export const AboutMePage: React.FC<Props> = ({
               {/* Horizontal line passing behind */}
               <div className="absolute left-0 right-0 h-[1px] bg-zinc-200/80 z-0 top-1/2 -translate-y-1/2"></div>
               <div className="w-24 sm:w-28 aspect-[3/4] bg-zinc-200 overflow-hidden relative border border-zinc-200 shadow-xs z-10 mt-8">
-                <img
-                  src="./profile-2.jpeg"
+                <ShutterRevealImage
+                  src="/profile-2.webp"
                   alt="smiling portrait"
-                  className="w-full h-full object-cover grayscale"
+                  className="w-full h-full"
+                  imgClassName="w-full h-full object-cover grayscale"
                 />
               </div>
             </div>
@@ -470,10 +488,11 @@ export const AboutMePage: React.FC<Props> = ({
               {/* Horizontal line passing behind */}
               <div className="absolute left-0 right-0 h-[1px] bg-zinc-200/80 z-0 top-1/2 -translate-y-1/2"></div>
               <div className="w-24 sm:w-28 aspect-[3/4] bg-zinc-200 overflow-hidden relative border border-zinc-200 shadow-xs z-10">
-                <img
-                  src="./profile-3.jpeg"
+                <ShutterRevealImage
+                  src="/profile-3.webp"
                   alt="clay mask selfie"
-                  className="w-full h-full object-cover grayscale contrast-125"
+                  className="w-full h-full"
+                  imgClassName="w-full h-full object-cover grayscale contrast-125"
                 />
               </div>
             </div>
