@@ -20,6 +20,7 @@ import { ScrollReveal } from './components/ScrollReveal';
 import { ShutterRevealImage } from './components/ShutterRevealImage';
 import { Footer } from './components/Footer';
 import { CurtainBlindsTransition, BlindsTransitionStage } from './components/CurtainBlindsTransition';
+import { BottomScrollProgress } from './components/BottomScrollProgress';
 import { ambientSound, setupGlobalUISFX, uiSfx } from './utils/audio';
 import { Language, Project } from './types';
 
@@ -193,11 +194,14 @@ export default function App() {
   // Initialize Ultra-Smooth Inertia Scrolling (Lenis)
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.8,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -12 * t)),
+      duration: 2.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
       smoothWheel: true,
-      wheelMultiplier: 1.0,
-      touchMultiplier: 2.0,
+      wheelMultiplier: 0.1,
+      touchMultiplier: 1.5,
+      infinite: false,
     });
     lenisRef.current = lenis;
 
@@ -266,7 +270,11 @@ export default function App() {
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el && lenisRef.current) {
-      lenisRef.current.scrollTo(el, { offset: -60, duration: 1.6 });
+      lenisRef.current.scrollTo(el, {
+        offset: -60,
+        duration: 1.8,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      });
     } else if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
@@ -976,6 +984,11 @@ export default function App() {
         onClose={() => setIsContactOpen(false)}
         lang={lang}
       />
+
+      {/* ------------------------------------------------------------- */}
+      {/* BOTTOM BLACK SCROLL PROGRESS BAR */}
+      {/* ------------------------------------------------------------- */}
+      <BottomScrollProgress currentPage={currentPage} />
 
       {/* ------------------------------------------------------------- */}
       {/* MOTION CURTAIN BLINDS PAGE TRANSITION OVERLAY */}
