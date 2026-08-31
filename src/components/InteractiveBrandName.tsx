@@ -13,7 +13,7 @@ export const InteractiveBrandName: React.FC<InteractiveBrandNameProps> = ({
   fullName = 'steward jason liuwindra',
   className = '',
 }) => {
-  // 3-step cycle matching the video: [jason] -> [steward jason liuwindra] -> [     ] -> [jason]
+  // 3-step cycle: [jason] -> [steward jason liuwindra] -> [     ] -> [jason]
   const [stateIndex, setStateIndex] = useState<number>(0);
 
   const states = [
@@ -32,27 +32,31 @@ export const InteractiveBrandName: React.FC<InteractiveBrandNameProps> = ({
   };
 
   return (
-    <div className={`flex items-center justify-center ${className}`}>
+    <div
+      className={`flex items-center justify-center ${className}`}
+      style={{ overflowAnchor: 'none' }}
+    >
       <motion.button
         type="button"
-        layout
+        layout="position"
         onClick={handleToggle}
         onMouseEnter={() => uiSfx.playHover()}
-        className="group relative inline-flex items-center justify-center font-sans tracking-tight text-3xl sm:text-4xl md:text-5xl select-none cursor-pointer focus:outline-hidden py-1 px-2 rounded-lg"
-        whileTap={{ scale: 0.95 }}
-        whileHover={{ scale: 1.015 }}
+        className="group relative inline-flex items-center justify-center font-sans tracking-tight text-2xl sm:text-4xl md:text-5xl select-none cursor-pointer focus:outline-hidden py-1 px-3 rounded-xl h-[56px] sm:h-[68px] md:h-[76px]"
+        whileTap={{ scale: 0.96 }}
+        whileHover={{ scale: 1.01 }}
         transition={{
-          layout: { type: 'spring', stiffness: 320, damping: 26 },
+          layout: { type: 'spring', stiffness: 350, damping: 28 },
         }}
+        style={{ overflowAnchor: 'none' }}
         aria-label={`Interactive name: ${current.text || 'empty'}. Click to cycle name.`}
         title="click to change"
       >
         {/* Opening bracket */}
         <motion.span
-          layout
+          layout="position"
           className="text-zinc-300 font-light font-sans group-hover:text-zinc-400 transition-colors duration-200"
           transition={{
-            layout: { type: 'spring', stiffness: 320, damping: 26 },
+            layout: { type: 'spring', stiffness: 350, damping: 28 },
           }}
         >
           [
@@ -60,21 +64,21 @@ export const InteractiveBrandName: React.FC<InteractiveBrandNameProps> = ({
 
         {/* Dynamic content area */}
         <motion.span
-          layout
-          className="relative inline-flex items-center justify-center px-1.5 sm:px-2 overflow-visible min-h-[1.25em]"
+          layout="position"
+          className="relative inline-flex items-center justify-center px-2 sm:px-3 overflow-visible h-full"
           transition={{
-            layout: { type: 'spring', stiffness: 320, damping: 26 },
+            layout: { type: 'spring', stiffness: 350, damping: 28 },
           }}
         >
-          <AnimatePresence mode="popLayout" initial={false}>
+          <AnimatePresence mode="wait" initial={false}>
             {current.text !== '' ? (
               <motion.span
                 key={current.key}
-                initial={{ opacity: 0, y: 5, filter: 'blur(3px)' }}
+                initial={{ opacity: 0, y: 4, filter: 'blur(3px)' }}
                 animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, y: -5, filter: 'blur(3px)' }}
+                exit={{ opacity: 0, y: -4, filter: 'blur(3px)' }}
                 transition={{
-                  duration: 0.24,
+                  duration: 0.18,
                   ease: [0.22, 1, 0.36, 1],
                 }}
                 className="text-zinc-900 font-medium px-0.5 tracking-tight lowercase whitespace-nowrap"
@@ -87,8 +91,8 @@ export const InteractiveBrandName: React.FC<InteractiveBrandNameProps> = ({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="inline-block w-8 sm:w-16 h-2"
+                transition={{ duration: 0.15 }}
+                className="inline-block w-8 sm:w-16 h-4 pointer-events-none"
               />
             )}
           </AnimatePresence>
@@ -96,10 +100,10 @@ export const InteractiveBrandName: React.FC<InteractiveBrandNameProps> = ({
 
         {/* Closing bracket */}
         <motion.span
-          layout
+          layout="position"
           className="text-zinc-300 font-light font-sans group-hover:text-zinc-400 transition-colors duration-200"
           transition={{
-            layout: { type: 'spring', stiffness: 320, damping: 26 },
+            layout: { type: 'spring', stiffness: 350, damping: 28 },
           }}
         >
           ]

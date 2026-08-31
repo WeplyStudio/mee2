@@ -145,7 +145,7 @@ export const Footer: React.FC<FooterProps> = ({
               <ul className="space-y-1.5 text-zinc-600">
                 <li>
                   <a
-                    href="https://instagram.com"
+                    href="https://instagram.com/jasonn.doc"
                     target="_blank"
                     rel="noreferrer"
                     className="group hover:text-black transition-colors flex items-center gap-1.5 lowercase"

@@ -60,14 +60,14 @@ export const MorphingMenu: React.FC<Props> = ({
       />
 
       {/* Anchor Wrapper so standard header spacing isn't affected when menu morphs/grows */}
-      <div className="relative w-[110px] h-[34px] pointer-events-auto">
+      <div className="relative w-[156px] sm:w-[170px] h-[38px] sm:h-[40px] pointer-events-auto">
         {/* Morphing Element Container */}
         <div
           ref={containerRef}
           className={`absolute top-0 left-1/2 -translate-x-1/2 transition-[width,height,border-radius,background-color,box-shadow,border-color,transform] duration-[550ms] ease-[cubic-bezier(0.25,1,0.2,1)] ${
             isOpen
               ? 'w-[calc(100vw-32px)] max-w-[380px] h-[520px] bg-[#111112] rounded-[32px] sm:rounded-[36px] shadow-[0_30px_70px_-20px_rgba(0,0,0,0.9)] border border-white/[0.08] z-50 flex flex-col justify-between text-[#e4e4e7] pointer-events-auto'
-              : 'w-[110px] h-[34px] bg-[#0f0f10] hover:bg-black rounded-full items-center justify-center text-white cursor-pointer shadow-md hover:shadow-lg active:scale-95 border border-transparent z-40 flex'
+              : 'w-[156px] sm:w-[170px] h-[38px] sm:h-[40px] bg-[#0c0c0d] hover:bg-black rounded-full items-center justify-between text-white cursor-pointer shadow-md hover:shadow-lg active:scale-95 border border-white/[0.06] z-40 flex'
           }`}
           onClick={() => {
             if (!isOpen) setIsOpen(true);
@@ -79,12 +79,12 @@ export const MorphingMenu: React.FC<Props> = ({
         >
           {/* Closed Button State Content */}
           <div
-            className={`absolute inset-0 flex items-center justify-center gap-2 text-xs sm:text-[13px] font-mono-code font-normal transition-all duration-300 ${
+            className={`absolute inset-0 flex items-center justify-between px-5 sm:px-6 text-xs sm:text-[13px] font-sans font-light tracking-tight transition-all duration-300 ${
               isOpen ? 'opacity-0 scale-75 pointer-events-none' : 'opacity-100 scale-100'
             }`}
           >
-            <span>[ ]</span>
-            <span>{menuLabel}</span>
+            <span className="font-mono-code text-zinc-300 tracking-wider text-xs sm:text-[13px]">[ ]</span>
+            <span className="text-white font-normal lowercase tracking-tight text-xs sm:text-[13px]">{menuLabel}</span>
           </div>
 
           {/* Open Menu State Content */}
@@ -220,7 +220,7 @@ export const MorphingMenu: React.FC<Props> = ({
 
               <div className="flex items-center gap-3.5 text-zinc-400 font-normal text-xs">
                 <a
-                  href="https://instagram.com"
+                  href="https://instagram.com/jasonn.doc"
                   target="_blank"
                   rel="noreferrer"
                   className="hover:text-white transition-colors lowercase"

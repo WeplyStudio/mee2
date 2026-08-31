@@ -1,0 +1,6 @@
+# Robots.txt for Jason Portfolio
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: /sitemap.xml

@@ -247,7 +247,7 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
             <div className="flex items-center justify-between pt-2">
               <div className="flex items-center gap-3 text-xs text-zinc-500">
                 <a 
-                  href="https://instagram.com" 
+                  href="https://instagram.com/jasonn.doc" 
                   target="_blank" 
                   rel="noreferrer"
                   className="hover:text-black flex items-center gap-0.5"

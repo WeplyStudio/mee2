@@ -269,6 +269,26 @@ export default function App() {
     setIsAudioPlaying(active);
   };
 
+  // Synchronize document language and dynamic title for SEO & Browser Tabs
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    let pageTitle = 'Jason — Designer & Software Engineer';
+    
+    if (currentPage === 'projects') {
+      pageTitle = lang === 'id' ? 'Karya & Proyek — Jason' : 'Works & Projects — Jason';
+    } else if (currentPage === 'project-detail' && activeProject) {
+      pageTitle = `${activeProject.title} — Jason`;
+    } else if (currentPage === 'aboutme') {
+      pageTitle = lang === 'id' ? 'Tentang Saya — Jason' : 'About Me & Story — Jason';
+    } else if (currentPage === 'contact') {
+      pageTitle = lang === 'id' ? 'Hubungi Saya — Jason' : 'Get in Touch — Jason';
+    } else if (currentPage === '404') {
+      pageTitle = '404 Not Found — Jason';
+    }
+
+    document.title = pageTitle;
+  }, [lang, currentPage, activeProject]);
+
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el && lenisRef.current) {
@@ -296,70 +316,71 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* TOP FLOATING / STICKY HEADER */}
       {/* ------------------------------------------------------------- */}
-      <header className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-center sm:justify-between pointer-events-none transition-all">
-        {/* Left: • get in touch (Hidden on mobile, visible on desktop) */}
-        <button
-          onClick={() => {
-            uiSfx.playSwitch();
-            navigateTo('contact');
-          }}
-          className="hidden sm:inline-flex pointer-events-auto group items-center gap-2 text-xs sm:text-[13px] font-medium text-zinc-800 hover:text-black transition-all cursor-pointer"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 group-hover:scale-125 transition-transform"></span>
-          <span className="tracking-tight">{t.getInTouch}</span>
-        </button>
+      <header className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 sm:py-5 flex items-center justify-between pointer-events-none transition-all">
+        {/* Left: • get in touch (Desktop) */}
+        <div className="flex-1 flex justify-start">
+          <button
+            onClick={() => {
+              uiSfx.playSwitch();
+              navigateTo('contact');
+            }}
+            className="hidden sm:inline-flex pointer-events-auto group items-center gap-2 text-xs sm:text-[13px] font-medium text-zinc-800 hover:text-black transition-all cursor-pointer"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 group-hover:scale-125 transition-transform"></span>
+            <span className="tracking-tight lowercase">{t.getInTouch}</span>
+          </button>
+        </div>
 
         {/* Center / Primary: [ ] Morphing Menu Button to Card */}
-        <MorphingMenu
-          isOpen={isMenuOpen}
-          setIsOpen={setIsMenuOpen}
-          lang={lang}
-          onSelectLang={setLang}
-          isAudioPlaying={isAudioPlaying}
-          onToggleAudio={toggleSound}
-          onOpenContact={() => {
-            navigateTo('contact');
-            setIsMenuOpen(false);
-          }}
-          onOpenStory={() => {
-            navigateTo('aboutme');
-            setIsMenuOpen(false);
-          }}
-          onOpen404={() => {
-            navigateTo('404');
-            setIsMenuOpen(false);
-          }}
-          onScrollTo={(id) => {
-            if (id === 'projects') {
-              navigateTo('projects');
-            } else {
-              navigateTo('home');
-              setTimeout(() => {
-                scrollToSection(id);
-              }, 100);
-            }
-          }}
-          menuLabel={t.menu}
-        />
+        <div className="flex justify-center">
+          <MorphingMenu
+            isOpen={isMenuOpen}
+            setIsOpen={setIsMenuOpen}
+            lang={lang}
+            onSelectLang={setLang}
+            isAudioPlaying={isAudioPlaying}
+            onToggleAudio={toggleSound}
+            onOpenContact={() => {
+              navigateTo('contact');
+              setIsMenuOpen(false);
+            }}
+            onOpenStory={() => {
+              navigateTo('aboutme');
+              setIsMenuOpen(false);
+            }}
+            onOpen404={() => {
+              navigateTo('404');
+              setIsMenuOpen(false);
+            }}
+            onScrollTo={(id) => {
+              if (id === 'projects') {
+                navigateTo('projects');
+              } else {
+                navigateTo('home');
+                setTimeout(() => {
+                  scrollToSection(id);
+                }, 100);
+              }
+            }}
+            menuLabel={t.menu}
+          />
+        </div>
 
-        {/* Right: Language selector pill group (Hidden on mobile, available in navbar menu) */}
-        <div className="hidden sm:flex pointer-events-auto items-center bg-white/90 backdrop-blur-md rounded-full p-0.5 border border-zinc-200/90 shadow-xs">
-          {(['id', 'en', 'de', 'ja'] as Language[]).map((l) => (
-            <button
-              key={l}
-              onClick={() => setLang(l)}
-              className={`px-2.5 py-1 rounded-full text-xs font-mono-code transition-all cursor-pointer ${
-                lang === l
-                  ? 'bg-[#ea580c] text-white font-semibold shadow-xs'
-                  : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
-              }`}
-              title={`Switch to ${
-                l === 'id' ? 'Bahasa Indonesia' : l === 'en' ? 'English' : l === 'de' ? 'Deutsch' : '日本語'
-              }`}
-            >
-              {l}
-            </button>
-          ))}
+        {/* Right: Red Language selector badge (Matching Screenshot) */}
+        <div className="flex-1 flex justify-end">
+          <button
+            onClick={() => {
+              uiSfx.playSwitch();
+              const languages: Language[] = ['en', 'id', 'de', 'ja'];
+              const nextIdx = (languages.indexOf(lang) + 1) % languages.length;
+              setLang(languages[nextIdx]);
+            }}
+            className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-[#d92338] hover:bg-[#c51c30] active:scale-95 text-white font-sans text-xs sm:text-[13px] rounded-[8px] sm:rounded-[9px] shadow-xs hover:shadow-sm transition-all cursor-pointer select-none"
+            title={`Language: ${lang}. Click to switch.`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+            <span className="font-medium lowercase tracking-tight">{lang}</span>
+          </button>
         </div>
       </header>
 
@@ -381,13 +402,13 @@ export default function App() {
               <span className="text-zinc-500 font-mono-code">{timeStr || '15:44:46'}</span>
             </div>
 
-            {/* Right: o lend an ear (Ambient sound toggle) */}
+            {/* Right: lend an ear (Ambient sound toggle) */}
             <button
               onClick={toggleSound}
               className="group flex items-center gap-2 text-zinc-400 hover:text-zinc-900 transition-colors cursor-pointer"
             >
               <span className={`w-1.5 h-1.5 rounded-full border border-zinc-400 group-hover:border-zinc-900 ${isAudioPlaying ? 'bg-emerald-500 border-emerald-500 animate-ping' : ''}`}></span>
-              <span>o {t.lendAnEar}</span>
+              <span>{t.lendAnEar}</span>
               {isAudioPlaying ? <Volume2 size={13} className="text-emerald-600 animate-pulse" /> : <VolumeX size={13} className="opacity-60" />}
             </button>
           </div>

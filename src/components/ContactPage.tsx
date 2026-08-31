@@ -369,7 +369,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
             <span className="text-zinc-400 lowercase">{c.connectLabel}</span>
             <div className="flex items-center gap-3 text-zinc-800">
               <a
-                href="https://instagram.com"
+                href="https://instagram.com/jasonn.doc"
                 target="_blank"
                 rel="noreferrer"
                 className="hover:text-black transition-colors lowercase"
