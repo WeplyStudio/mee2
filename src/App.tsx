@@ -36,26 +36,90 @@ interface NavigationTarget {
   skipHistory?: boolean;
 }
 
+// Utility to extract initial language from query parameters or default to 'en'
+function getInitialLang(): Language {
+  if (typeof window === 'undefined') return 'en';
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const langParam = params.get('lang')?.toLowerCase();
+    if (langParam === 'id' || langParam === 'en' || langParam === 'de' || langParam === 'ja') {
+      return langParam;
+    }
+  } catch {}
+  return 'en';
+}
+
+// Utility to parse the current URL (pathname & hash) and determine the active page & project
+function parseLocationFromUrl(currentLang: Language = 'en'): { page: PageType; project: Project | null; path: string } {
+  if (typeof window === 'undefined') {
+    return { page: 'home', project: null, path: '/' };
+  }
+
+  const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
+  const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '').trim();
+
+  // If path is root '/' but hash specifies a page (e.g. #aboutme, #/contact)
+  const route = (rawPath === '/' && hash && !hash.startsWith('projects') && !hash.startsWith('services') && !hash.startsWith('stats') && !hash.startsWith('faq'))
+    ? `/${hash}`
+    : rawPath;
+
+  if (route === '/' || route === '' || route === '/home') {
+    return { page: 'home', project: null, path: '/' };
+  }
+
+  if (route === '/aboutme' || route === '/about') {
+    return { page: 'aboutme', project: null, path: '/aboutme' };
+  }
+
+  if (route === '/projects' || route === '/works') {
+    return { page: 'projects', project: null, path: '/projects' };
+  }
+
+  if (route === '/contact' || route === '/get-in-touch') {
+    return { page: 'contact', project: null, path: '/contact' };
+  }
+
+  if (route === '/404') {
+    return { page: '404', project: null, path: '/404' };
+  }
+
+  // Check project detail routes: /project/:id or /projects/:id or direct slug /zylo
+  const projectDetailMatch = route.match(/^\/(?:project|projects)\/([a-z0-9_-]+)$/i);
+  const directSlugMatch = route.match(/^\/([a-z0-9_-]+)$/i);
+  const candidateId = projectDetailMatch ? projectDetailMatch[1] : (directSlugMatch ? directSlugMatch[1] : null);
+
+  if (candidateId) {
+    const allProjects = getProjectsData(currentLang);
+    const matched = allProjects.find((p) => p.id.toLowerCase() === candidateId.toLowerCase());
+    if (matched) {
+      return { page: 'project-detail', project: matched, path: `/project/${matched.id}` };
+    }
+  }
+
+  // If none matched, route directly to the 404 page
+  return { page: '404', project: null, path: rawPath };
+}
+
 export default function App() {
-  const [lang, setLang] = useState<Language>('en');
+  const [lang, setLang] = useState<Language>(() => getInitialLang());
   const [timeStr, setTimeStr] = useState<string>('');
   const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
   const [expandedThought, setExpandedThought] = useState<string>('01');
   const [expandedService, setExpandedService] = useState<string>('01');
   const [expandedFaq, setExpandedFaq] = useState<string>('01');
-  const [activeProject, setActiveProject] = useState<Project | null>(null);
 
-  // Modals state
-  const [currentPage, setCurrentPage] = useState<PageType>('home');
+  // Synchronous route initialization on first mount
+  const [currentPage, setCurrentPage] = useState<PageType>(() => parseLocationFromUrl(getInitialLang()).page);
+  const [activeProject, setActiveProject] = useState<Project | null>(() => parseLocationFromUrl(getInitialLang()).project);
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
 
   // Blinds Curtain Transition State
   const [blindsStage, setBlindsStage] = useState<BlindsTransitionStage>('idle');
-  const [transitionTitle, setTransitionTitle] = useState<string>('steward jason');
+  const [transitionTitle, setTransitionTitle] = useState<string>('jason');
   const pendingNavRef = useRef<NavigationTarget | null>(null);
   const isTransitioningRef = useRef<boolean>(false);
-  const currentPageRef = useRef<PageType>('home');
+  const currentPageRef = useRef<PageType>(currentPage);
 
   useEffect(() => {
     currentPageRef.current = currentPage;
@@ -85,7 +149,7 @@ export default function App() {
     }
 
     // Set transition label for the blinds center indicator
-    let title = 'steward jason';
+    let title = 'jason';
     if (options?.project) {
       title = options.project.title;
     } else if (page === 'aboutme') {
@@ -95,7 +159,7 @@ export default function App() {
     } else if (page === 'contact') {
       title = 'get in touch';
     } else if (page === 'home') {
-      title = 'steward jason';
+      title = 'jason';
     } else if (page === '404') {
       title = '404 not found';
     }
@@ -140,9 +204,19 @@ export default function App() {
       // Update browser history URL
       if (!pending.skipHistory) {
         try {
-          const path = pending.targetPath || (pending.page === 'home' ? '/' : `/${pending.page}`);
+          let path = pending.targetPath;
+          if (!path) {
+            if (pending.page === 'home') path = '/';
+            else if (pending.page === 'aboutme') path = '/aboutme';
+            else if (pending.page === 'projects') path = '/projects';
+            else if (pending.page === 'contact') path = '/contact';
+            else if (pending.page === '404') path = '/404';
+            else if (pending.page === 'project-detail' && pending.project) path = `/project/${pending.project.id}`;
+            else path = `/${pending.page}`;
+          }
+
           if (window.location.pathname !== path) {
-            window.history.pushState({ page: pending.page }, '', path);
+            window.history.pushState({ page: pending.page, projectId: pending.project?.id }, '', path);
           }
         } catch {}
       }
@@ -159,39 +233,31 @@ export default function App() {
     pendingNavRef.current = null;
   };
 
-  // Hash, Path and Popstate route listener (Supports direct links, Vercel SPA rewrites, and 404 fallback)
+  // Hash, Path, and Popstate route listener (Handles back/forward browser navigation & hash links)
   useEffect(() => {
-    const handleRoute = () => {
-      const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '').trim();
-      const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
+    const handlePopState = () => {
+      const { page, project } = parseLocationFromUrl(lang);
+      
+      if (page !== currentPageRef.current || (page === 'project-detail' && project?.id !== activeProject?.id)) {
+        setCurrentPage(page);
+        currentPageRef.current = page;
+        setActiveProject(project);
 
-      let targetPage: PageType = 'home';
-      if (rawPath === '/aboutme' || hash === 'aboutme') {
-        targetPage = 'aboutme';
-      } else if (rawPath === '/projects' || hash === 'projects') {
-        targetPage = 'projects';
-      } else if (rawPath === '/contact' || hash === 'contact') {
-        targetPage = 'contact';
-      } else if (rawPath === '/404' || hash === '404') {
-        targetPage = '404';
-      } else if (rawPath === '/' || rawPath === '' || hash === 'home' || hash === '') {
-        targetPage = 'home';
-      } else {
-        targetPage = '404';
-      }
-
-      if (targetPage !== currentPageRef.current) {
-        navigateTo(targetPage, undefined, { skipHistory: true });
+        if (lenisRef.current) {
+          lenisRef.current.scrollTo(0, { immediate: true });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        }
       }
     };
 
-    window.addEventListener('hashchange', handleRoute);
-    window.addEventListener('popstate', handleRoute);
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
     return () => {
-      window.removeEventListener('hashchange', handleRoute);
-      window.removeEventListener('popstate', handleRoute);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
     };
-  }, []);
+  }, [lang, activeProject]);
 
   // Initialize Ultra-Smooth Inertia Scrolling (Lenis)
   useEffect(() => {
