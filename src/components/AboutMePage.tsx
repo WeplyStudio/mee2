@@ -387,8 +387,8 @@ export const AboutMePage: React.FC<Props> = ({
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
           {/* Column 1 (Left) */}
           <div className="md:col-span-4 space-y-8 flex flex-col justify-start">
-            {/* Top Left Photo */}
-            <div className="aspect-[3/4] w-full sm:w-[90%] overflow-hidden border border-zinc-200/50 shadow-md">
+            {/* Top Left Photo - Hidden on mobile, shown on desktop */}
+            <div className="hidden md:block aspect-[3/4] w-full sm:w-[90%] overflow-hidden border border-zinc-200/50 shadow-md">
               <ShutterRevealImage
                 src="/profile.webp"
                 alt="steward jason"
