@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getProjectsData, TRANSLATIONS } from '../data/portfolioData';
 import { ProjectMockup } from './ProjectMockup';
 import { ScrollReveal } from './ScrollReveal';
+import { InteractiveBrandName } from './InteractiveBrandName';
 import { Language, Project } from '../types';
 
 interface ProjectsPageProps {
@@ -134,29 +135,29 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
         )}
       </div>
 
-      {/* "Let's build something meaningful" section with get in touch button */}
-      <section className="py-24 sm:py-32 px-6 text-center max-w-xl mx-auto space-y-6">
+      {/* Editorial Statement Section [not the end] */}
+      <section className="py-28 sm:py-36 md:py-44 px-6 text-center max-w-2xl mx-auto space-y-7 sm:space-y-9">
         <ScrollReveal delay={100} distance={20}>
-          <h3 className="text-sm sm:text-base font-bold tracking-tight text-zinc-900 lowercase">
-            {t.buildHeading}
-          </h3>
+          <div className="text-[12px] sm:text-xs text-zinc-400 font-mono-code lowercase tracking-wider">
+            {t.buildTag || '[not the end]'}
+          </div>
         </ScrollReveal>
 
-        <ScrollReveal delay={180} distance={15}>
-          <p className="text-xs sm:text-[13px] text-zinc-500 leading-relaxed lowercase">
-            {t.buildSub}
-          </p>
+        <ScrollReveal delay={160} distance={25}>
+          <InteractiveBrandName
+            shortName={t.buildBrand || 'jason'}
+            fullName={t.buildFullName || 'steward jason liuwindra'}
+          />
         </ScrollReveal>
 
-        <ScrollReveal delay={240} distance={15}>
-          <div className="pt-2">
-            <button
-              onClick={onOpenContact}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-300 hover:border-zinc-900 bg-white hover:bg-zinc-50 text-zinc-800 hover:text-black text-xs font-mono-code transition-all shadow-xs active:scale-95 cursor-pointer lowercase"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 animate-pulse"></span>
-              <span>• {t.getInTouch}</span>
-            </button>
+        <ScrollReveal delay={220} distance={20}>
+          <div className="space-y-3 pt-2 sm:pt-4">
+            <h3 className="text-xl sm:text-2xl md:text-3xl text-zinc-900 font-light tracking-tight leading-snug max-w-md mx-auto lowercase">
+              {t.buildHeading}
+            </h3>
+            <p className="text-xs sm:text-[13px] text-zinc-400 font-light lowercase pt-1">
+              {t.buildSub}
+            </p>
           </div>
         </ScrollReveal>
       </section>

@@ -21,6 +21,8 @@ import { ShutterRevealImage } from './components/ShutterRevealImage';
 import { Footer } from './components/Footer';
 import { CurtainBlindsTransition, BlindsTransitionStage } from './components/CurtainBlindsTransition';
 import { BottomScrollProgress } from './components/BottomScrollProgress';
+import { InteractiveBrandName } from './components/InteractiveBrandName';
+import { EncryptedPrinciple } from './components/EncryptedPrinciple';
 import { ambientSound, setupGlobalUISFX, uiSfx } from './utils/audio';
 import { Language, Project } from './types';
 
@@ -518,11 +520,11 @@ export default function App() {
               </div>
             </ScrollReveal>
           </div>
-          <div className="md:col-span-8 space-y-3 sm:space-y-3.5 text-xs sm:text-[13px] text-zinc-700">
+          <div className="md:col-span-8 space-y-2 sm:space-y-2.5 text-xs sm:text-[13px] text-zinc-700">
             {currentPrinciples.map((principle, index) => (
               <ScrollReveal key={index} delay={index * 80} distance={20}>
-                <div className="hover:text-black transition-colors">
-                  {principle}
+                <div>
+                  <EncryptedPrinciple text={principle} lang={lang} />
                 </div>
               </ScrollReveal>
             ))}
@@ -844,33 +846,30 @@ export default function App() {
       </section>
 
       {/* ------------------------------------------------------------- */}
-      {/* CALL TO ACTION SECTION */}
+      {/* NOT THE END / EDITORIAL STATEMENT SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section className="py-28 sm:py-36 px-6 text-center max-w-xl mx-auto space-y-6">
-        <ScrollReveal delay={100} distance={30}>
-          <h3 className="text-sm sm:text-base font-bold tracking-tight text-zinc-900">
-            {t.buildHeading}
-          </h3>
+      <section className="py-28 sm:py-36 md:py-44 px-6 text-center max-w-2xl mx-auto space-y-7 sm:space-y-9">
+        <ScrollReveal delay={100} distance={20}>
+          <div className="text-[12px] sm:text-xs text-zinc-400 font-mono-code lowercase tracking-wider">
+            {t.buildTag || '[not the end]'}
+          </div>
         </ScrollReveal>
 
-        <ScrollReveal delay={180} distance={25}>
-          <p className="text-xs sm:text-[13px] text-zinc-500 leading-relaxed">
-            {t.buildSub}
-          </p>
+        <ScrollReveal delay={160} distance={25}>
+          <InteractiveBrandName
+            shortName={t.buildBrand || 'jason'}
+            fullName={t.buildFullName || 'steward jason liuwindra'}
+          />
         </ScrollReveal>
 
-        <ScrollReveal delay={240} distance={20}>
-          <div className="pt-2">
-            <button
-              onClick={() => {
-                uiSfx.playSwitch();
-                navigateTo('contact');
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-300 hover:border-zinc-900 bg-white hover:bg-zinc-50 text-zinc-800 hover:text-black text-xs font-medium transition-all shadow-xs active:scale-95 cursor-pointer"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-zinc-900"></span>
-              <span>{t.getInTouch}</span>
-            </button>
+        <ScrollReveal delay={220} distance={20}>
+          <div className="space-y-3 pt-2 sm:pt-4">
+            <h3 className="text-xl sm:text-2xl md:text-3xl text-zinc-900 font-light tracking-tight leading-snug max-w-md mx-auto lowercase">
+              {t.buildHeading}
+            </h3>
+            <p className="text-xs sm:text-[13px] text-zinc-400 font-light lowercase pt-1">
+              {t.buildSub}
+            </p>
           </div>
         </ScrollReveal>
       </section>

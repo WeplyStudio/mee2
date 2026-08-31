@@ -152,6 +152,35 @@ class UISoundEffects {
       // Audio blocked
     }
   }
+
+  /**
+   * uisfx Cyber Scramble/Decrypt Burst
+   */
+  public playScramble() {
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(450, now);
+      osc.frequency.linearRampToValueAtTime(1400, now + 0.08);
+
+      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.095);
+    } catch {
+      // Audio blocked
+    }
+  }
 }
 
 export const uiSfx = new UISoundEffects();
