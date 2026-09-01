@@ -29,6 +29,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const captchaRef = useRef<CaptchaRef>(null);
   const formMountTimeRef = useRef<number>(Date.now());
 
@@ -135,6 +136,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
 
     // Validate anti-spam captcha before proceeding
     if (captchaRef.current && !captchaRef.current.validate()) {
@@ -144,7 +146,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
     setIsSubmitting(true);
 
     try {
-      await sendTelegramNotification({
+      const result = await sendTelegramNotification({
         name: formData.name,
         company: formData.company,
         email: formData.email,
@@ -155,20 +157,25 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
         honeypot: captchaRef.current?.getHoneypotValue() || '',
         formLoadTime: formMountTimeRef.current,
       });
+
+      if (result.success) {
+        setIsSuccess(true);
+        setFormData({
+          name: '',
+          company: '',
+          email: '',
+          phone: '',
+          subject: '',
+          message: '',
+        });
+        captchaRef.current?.reset();
+      } else {
+        setErrorMessage(result.error || 'Gagal mengirim pesan. Silakan coba kembali.');
+      }
     } catch {
-      // Handled gracefully
+      setErrorMessage('Terjadi masalah koneksi. Silakan coba lagi.');
     } finally {
       setIsSubmitting(false);
-      setIsSuccess(true);
-      setFormData({
-        name: '',
-        company: '',
-        email: '',
-        phone: '',
-        subject: '',
-        message: '',
-      });
-      captchaRef.current?.reset();
     }
   };
 
@@ -330,6 +337,13 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
                   <AntiSpamCaptcha ref={captchaRef} lang={lang} />
                 </div>
               </ScrollReveal>
+
+              {/* Error Message Display */}
+              {errorMessage && (
+                <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono-code">
+                  {errorMessage}
+                </div>
+              )}
 
               {/* Purple pill button matching screenshot */}
               <ScrollReveal delay={340} distance={15}>

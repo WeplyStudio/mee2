@@ -16,9 +16,14 @@ app.use(express.urlencoded({ extended: true, limit: '64kb' }));
 app.set('trust proxy', true);
 
 // Server-side ONLY secrets (Never exposed to client browser / bundle)
+const ACTIVE_TELEGRAM_BOT_TOKEN = '8459837666:AAHY7tsADTJ9jvpDYfXKQXXvog3Cwo4Mwf0';
+const envToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
+// Disregard the old revoked token if present in container environment
 const TELEGRAM_BOT_TOKEN =
-  process.env.TELEGRAM_BOT_TOKEN || '8459837666:AAHY7tsADTJ9jvpDYfXKQXXvog3Cwo4Mwf0';
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '6196850470';
+  envToken && !envToken.includes('AAGIgAT71O9EbNaMsQK1n9yNND6AW6-AyoU')
+    ? envToken
+    : ACTIVE_TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID?.trim() || '6196850470';
 
 // In-Memory Rate Limiting & Anti-Flood Map (IP -> timestamps array)
 interface RateLimitRecord {
@@ -115,13 +120,7 @@ app.post('/api/contact', async (req: Request, res: Response) => {
       return res.json({ ok: true, message: 'Message sent successfully.' });
     }
 
-    // 4. Form Timing Check (Rejects submissions submitted faster than humanly possible: < 1.0s)
-    const formLoadTime = Number(req.body.formLoadTime);
-    if (formLoadTime && now - formLoadTime < 1000) {
-      return res.json({ ok: true, message: 'Message received.' });
-    }
-
-    // 5. Input Validation & Bounds Check
+    // 4. Input Validation & Bounds Check
     const name = String(req.body.name || '').trim().slice(0, 100);
     const email = String(req.body.email || '').trim().slice(0, 120);
     const company = String(req.body.company || '').trim().slice(0, 100);

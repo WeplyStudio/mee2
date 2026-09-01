@@ -18,6 +18,8 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const captchaRef = useRef<CaptchaRef>(null);
   const formMountTimeRef = useRef<number>(Date.now());
 
@@ -31,31 +33,43 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
 
     if (captchaRef.current && !captchaRef.current.validate()) {
       return;
     }
 
-    setSent(true);
-
-    sendTelegramNotification({
-      name,
-      email,
-      message,
-      source: 'Quick Contact Modal',
-      honeypot: captchaRef.current?.getHoneypotValue() || '',
-      formLoadTime: formMountTimeRef.current,
-    });
+    setIsSubmitting(true);
 
     try {
-      confetti({
-        particleCount: 80,
-        spread: 60,
-        origin: { y: 0.6 }
+      const result = await sendTelegramNotification({
+        name,
+        email,
+        message,
+        source: 'Quick Contact Modal',
+        honeypot: captchaRef.current?.getHoneypotValue() || '',
+        formLoadTime: formMountTimeRef.current,
       });
-    } catch { }
+
+      if (result.success) {
+        setSent(true);
+        try {
+          confetti({
+            particleCount: 80,
+            spread: 60,
+            origin: { y: 0.6 }
+          });
+        } catch { }
+      } else {
+        setErrorMessage(result.error || 'Gagal mengirim pesan. Silakan coba kembali.');
+      }
+    } catch {
+      setErrorMessage('Terjadi masalah koneksi ke server.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const texts: Record<Language, {
@@ -247,6 +261,13 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
             {/* Anti-Spam Captcha Challenge */}
             <AntiSpamCaptcha ref={captchaRef} lang={lang} />
 
+            {/* Error message */}
+            {errorMessage && (
+              <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono-code">
+                {errorMessage}
+              </div>
+            )}
+
             <div className="flex items-center justify-between pt-2">
               <div className="flex items-center gap-3 text-xs text-zinc-500">
                 <a 
@@ -269,9 +290,10 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
 
               <button
                 type="submit"
-                className="px-5 py-2.5 bg-black hover:bg-zinc-800 text-white rounded-full text-xs font-semibold flex items-center gap-2 transition-transform active:scale-95 shadow-md cursor-pointer"
+                disabled={isSubmitting}
+                className="px-5 py-2.5 bg-black hover:bg-zinc-800 text-white rounded-full text-xs font-semibold flex items-center gap-2 transition-transform active:scale-95 shadow-md cursor-pointer disabled:opacity-60"
               >
-                <span>{current.sendMessage}</span>
+                <span>{isSubmitting ? 'Mengirim...' : current.sendMessage}</span>
                 <Send size={13} />
               </button>
             </div>
