@@ -335,7 +335,7 @@ export default function App() {
     setIsAudioPlaying(active);
   };
 
-  // Synchronize document language and dynamic title for SEO & Browser Tabs
+  // Synchronize document language, dynamic title, canonical URL, and open graph URLs for SEO
   useEffect(() => {
     document.documentElement.lang = lang;
     let pageTitle = 'Jason — Designer & Software Engineer';
@@ -353,6 +353,23 @@ export default function App() {
     }
 
     document.title = pageTitle;
+
+    // Dynamically update Canonical and OpenGraph URLs to match current live hostname
+    if (typeof window !== 'undefined') {
+      const currentUrl = window.location.href;
+      const canonicalEl = document.querySelector('link[rel="canonical"]');
+      if (canonicalEl) {
+        canonicalEl.setAttribute('href', currentUrl);
+      }
+      const ogUrlEl = document.querySelector('meta[property="og:url"]');
+      if (ogUrlEl) {
+        ogUrlEl.setAttribute('content', currentUrl);
+      }
+      const twitterUrlEl = document.querySelector('meta[name="twitter:url"]');
+      if (twitterUrlEl) {
+        twitterUrlEl.setAttribute('content', currentUrl);
+      }
+    }
   }, [lang, currentPage, activeProject]);
 
   const scrollToSection = (id: string) => {

@@ -1,6 +1,9 @@
 # Robots.txt for Jason Portfolio
 User-agent: *
 Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
 
-# Sitemaps
+# Sitemaps & LLM Context
 Sitemap: /sitemap.xml
+
