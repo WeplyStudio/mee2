@@ -19,6 +19,7 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
   const captchaRef = useRef<CaptchaRef>(null);
+  const formMountTimeRef = useRef<number>(Date.now());
 
   if (!isOpen) return null;
 
@@ -44,6 +45,8 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
       email,
       message,
       source: 'Quick Contact Modal',
+      honeypot: captchaRef.current?.getHoneypotValue() || '',
+      formLoadTime: formMountTimeRef.current,
     });
 
     try {

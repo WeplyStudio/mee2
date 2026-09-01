@@ -259,25 +259,35 @@ export default function App() {
     };
   }, [lang, activeProject]);
 
-  // Initialize Ultra-Smooth Inertia Scrolling (Lenis)
+  // Initialize Ultra-Smooth Inertia Scrolling (Lenis) with custom easing and velocity dampening
   useEffect(() => {
+    // Custom luxury exponential ease-out curve
+    const smoothEasing = (t: number) => {
+      // Exponential ease-out with soft tail dampening
+      return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+    };
+
     const lenis = new Lenis({
-      duration: 2.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      duration: 1.9,
+      easing: smoothEasing,
       orientation: 'vertical',
       gestureOrientation: 'vertical',
       smoothWheel: true,
-      wheelMultiplier: 0.1,
-      touchMultiplier: 1.5,
+      syncTouch: true,
+      syncTouchLerp: 0.075,
+      touchInertiaExponent: 1.6,
+      wheelMultiplier: 0.75,
+      touchMultiplier: 0.95,
       infinite: false,
     });
     lenisRef.current = lenis;
 
+    let reqId: number;
     function raf(time: number) {
       lenis.raf(time);
-      requestAnimationFrame(raf);
+      reqId = requestAnimationFrame(raf);
     }
-    const reqId = requestAnimationFrame(raf);
+    reqId = requestAnimationFrame(raf);
 
     return () => {
       cancelAnimationFrame(reqId);
@@ -377,8 +387,8 @@ export default function App() {
     if (el && lenisRef.current) {
       lenisRef.current.scrollTo(el, {
         offset: -60,
-        duration: 1.8,
-        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        duration: 1.6,
+        easing: (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
       });
     } else if (el) {
       el.scrollIntoView({ behavior: 'smooth' });

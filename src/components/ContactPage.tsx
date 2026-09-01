@@ -30,6 +30,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const captchaRef = useRef<CaptchaRef>(null);
+  const formMountTimeRef = useRef<number>(Date.now());
 
   const localizedContent = {
     id: {
@@ -151,6 +152,8 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
         subject: formData.subject,
         message: formData.message,
         source: 'Full Contact Page (/contact)',
+        honeypot: captchaRef.current?.getHoneypotValue() || '',
+        formLoadTime: formMountTimeRef.current,
       });
     } catch {
       // Handled gracefully

@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Language } from '../types';
-import { TRANSLATIONS } from '../data/portfolioData';
+import { uiSfx } from '../utils/audio';
 
 interface Props {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  lang: Language;
-  onSelectLang: (l: Language) => void;
+  lang?: Language;
+  onSelectLang?: (l: Language) => void;
   isAudioPlaying: boolean;
   onToggleAudio: () => void;
   onOpenContact: () => void;
@@ -16,11 +17,44 @@ interface Props {
   menuLabel: string;
 }
 
+// Sophisticated custom bezier easing curves
+const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
+const EASE_IN_OUT_CUBIC = [0.65, 0, 0.35, 1] as const;
+
+// Staggered motion variants for smooth menu items entry
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.045,
+      delayChildren: 0.1,
+    },
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      duration: 0.2,
+      ease: EASE_IN_OUT_CUBIC,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.42,
+      ease: EASE_OUT_EXPO,
+    },
+  },
+};
+
 export const MorphingMenu: React.FC<Props> = ({
   isOpen,
   setIsOpen,
-  lang,
-  onSelectLang,
   isAudioPlaying,
   onToggleAudio,
   onOpenContact,
@@ -29,218 +63,260 @@ export const MorphingMenu: React.FC<Props> = ({
   menuLabel,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
 
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false);
+      if (e.key === 'Escape' && isOpen) {
+        uiSfx.playClick();
+        setIsOpen(false);
+      }
     };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
+    window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, setIsOpen]);
 
   const handleNav = (action: () => void) => {
+    uiSfx.playClick();
     setIsOpen(false);
     setTimeout(() => {
       action();
-    }, 450);
+    }, 380);
   };
 
   return (
     <>
-      {/* Backdrop fading in behind */}
-      <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-auto ${
-          isOpen ? 'opacity-100 z-45' : 'opacity-0 pointer-events-none z-0'
-        }`}
-        onClick={() => setIsOpen(false)}
-      />
+      {/* Backdrop fading in behind with smooth easing */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: EASE_OUT_EXPO }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-[4px] z-45 pointer-events-auto"
+            onClick={() => {
+              uiSfx.playClick();
+              setIsOpen(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
 
-      {/* Anchor Wrapper so standard header spacing isn't affected when menu morphs/grows */}
-      <div className="relative w-[156px] sm:w-[170px] h-[38px] sm:h-[40px] pointer-events-auto">
-        {/* Morphing Element Container */}
-        <div
+      {/* Anchor Container */}
+      <div className="relative w-[156px] sm:w-[170px] h-[38px] sm:h-[40px] pointer-events-auto z-50">
+        <motion.div
           ref={containerRef}
-          className={`absolute top-0 left-1/2 -translate-x-1/2 transition-[width,height,border-radius,background-color,box-shadow,border-color,transform] duration-[550ms] ease-[cubic-bezier(0.25,1,0.2,1)] ${
+          initial={false}
+          animate={
             isOpen
-              ? 'w-[calc(100vw-32px)] max-w-[380px] h-[520px] bg-[#111112] rounded-[32px] sm:rounded-[36px] shadow-[0_30px_70px_-20px_rgba(0,0,0,0.9)] border border-white/[0.08] z-50 flex flex-col justify-between text-[#e4e4e7] pointer-events-auto'
-              : 'w-[156px] sm:w-[170px] h-[38px] sm:h-[40px] bg-[#0c0c0d] hover:bg-black rounded-full items-center justify-between text-white cursor-pointer shadow-md hover:shadow-lg active:scale-95 border border-white/[0.06] z-40 flex'
-          }`}
-          onClick={() => {
-            if (!isOpen) setIsOpen(true);
+              ? {
+                  width: 'min(calc(100vw - 32px), 350px)',
+                  height: 'min(calc(100vh - 120px), 490px)',
+                  borderRadius: 28,
+                  backgroundColor: '#141414',
+                  boxShadow: '0 30px 80px -15px rgba(0, 0, 0, 0.95)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                }
+              : {
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: 20,
+                  backgroundColor: '#0d0d0e',
+                  boxShadow: '0 4px 20px -4px rgba(0, 0, 0, 0.5)',
+                  borderColor: 'rgba(255, 255, 255, 0.08)',
+                }
+          }
+          transition={{
+            duration: isOpen ? 0.48 : 0.38,
+            ease: isOpen ? EASE_OUT_EXPO : EASE_IN_OUT_CUBIC,
           }}
-          style={{
-            transformOrigin: 'top center',
-            willChange: 'width, height, border-radius, background-color, transform',
+          className="absolute top-0 left-1/2 -translate-x-1/2 overflow-hidden border flex flex-col justify-between select-none cursor-pointer"
+          style={{ transformOrigin: 'top center' }}
+          onClick={() => {
+            if (!isOpen) {
+              uiSfx.playClick();
+              setIsOpen(true);
+            }
           }}
         >
-          {/* Closed Button State Content */}
-          <div
-            className={`absolute inset-0 flex items-center justify-between px-5 sm:px-6 text-xs sm:text-[13px] font-sans font-light tracking-tight transition-all duration-300 ${
-              isOpen ? 'opacity-0 scale-75 pointer-events-none' : 'opacity-100 scale-100'
-            }`}
-          >
-            <span className="font-mono-code text-zinc-300 tracking-wider text-xs sm:text-[13px]">[ ]</span>
-            <span className="text-white font-normal lowercase tracking-tight text-xs sm:text-[13px]">{menuLabel}</span>
-          </div>
-
-          {/* Open Menu State Content */}
-          <div
-            className={`flex flex-col justify-between h-full w-full p-7 sm:p-8 transition-all duration-500 ${
-              isOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none absolute inset-0'
-            }`}
-          >
-            {/* Top Row */}
-            <div className="flex items-center justify-between text-xs text-zinc-400">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleAudio();
-                }}
-                className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer group"
+          {/* Closed State Pill Content */}
+          <AnimatePresence>
+            {!isOpen && (
+              <motion.div
+                key="closed-pill-content"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.16, ease: EASE_OUT_EXPO }}
+                className="absolute inset-0 flex items-center justify-between px-5 text-xs sm:text-[13px] font-sans font-light tracking-tight text-white hover:text-zinc-200"
               >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full border border-zinc-400 group-hover:border-white transition-all ${
-                    isAudioPlaying ? 'bg-emerald-400 border-emerald-400 ring-2 ring-emerald-400/30' : ''
-                  }`}
-                ></span>
-                <span className="font-normal tracking-wide text-zinc-400 group-hover:text-zinc-200 lowercase">
-                  {t.lendAnEar}
-                </span>
-              </button>
+                <span className="font-mono-code text-zinc-400 tracking-wider text-xs">[ ]</span>
+                <span className="font-normal lowercase tracking-tight text-xs sm:text-[13px]">{menuLabel}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsOpen(false);
-                }}
-                className="font-semibold text-white hover:text-zinc-300 transition-colors tracking-tight text-xs cursor-pointer lowercase"
+          {/* Open State Menu Content */}
+          <AnimatePresence>
+            {isOpen && (
+              <motion.div
+                key="open-menu-content"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="flex flex-col justify-between h-full w-full p-6 sm:p-7 text-[#e4e4e7] cursor-default"
+                onClick={(e) => e.stopPropagation()}
               >
-                {t.close}
-              </button>
-            </div>
-
-            {/* Navigation Links */}
-            <div className="flex flex-col space-y-3.5 sm:space-y-4 pl-1 my-auto">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNav(() => onScrollTo('hero'));
-                }}
-                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer lowercase"
-              >
-                {t.home}
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNav(onOpenStory);
-                }}
-                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer lowercase"
-              >
-                {t.aboutme}
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNav(() => onScrollTo('projects'));
-                }}
-                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer lowercase"
-              >
-                {t.projects}
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNav(() => onScrollTo('services'));
-                }}
-                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer lowercase"
-              >
-                {t.services}
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNav(onOpenContact);
-                }}
-                className="text-left text-2xl sm:text-[32px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-tight cursor-pointer lowercase"
-              >
-                {t.getInTouch}
-              </button>
-            </div>
-
-            {/* Language Switcher Row */}
-            <div className="pt-3 pb-1 border-t border-zinc-800/80">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono-code text-zinc-500 lowercase">
-                  [language / bahasa]
-                </span>
-                <span className="text-[10px] font-mono-code text-zinc-500 uppercase">
-                  {lang}
-                </span>
-              </div>
-              <div className="grid grid-cols-4 gap-1.5 bg-zinc-900/90 rounded-xl p-1 border border-zinc-800">
-                {[
-                  { code: 'id', label: 'ID', desc: 'Indonesian' },
-                  { code: 'en', label: 'EN', desc: 'English' },
-                  { code: 'de', label: 'DE', desc: 'Deutsch' },
-                  { code: 'ja', label: 'JA', desc: '日本語' },
-                ].map((item) => (
+                {/* Top Row: o lend an ear       close */}
+                <motion.div variants={itemVariants} className="flex items-center justify-between text-xs text-zinc-400">
                   <button
-                    key={item.code}
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSelectLang(item.code as Language);
+                      uiSfx.playSwitch();
+                      onToggleAudio();
                     }}
-                    className={`py-1.5 px-1 rounded-lg text-xs font-mono-code flex flex-col items-center justify-center transition-all cursor-pointer ${
-                      lang === item.code
-                        ? 'bg-[#ea580c] text-white font-bold shadow-xs scale-100'
-                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
-                    }`}
+                    onMouseEnter={() => uiSfx.playHover()}
+                    className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer group lowercase"
                   >
-                    <span className="font-bold text-xs tracking-wider">{item.label}</span>
-                    <span className="text-[9px] opacity-80">{item.desc}</span>
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full border border-zinc-400 group-hover:border-white transition-all ${
+                        isAudioPlaying ? 'bg-emerald-400 border-emerald-400 ring-2 ring-emerald-400/30' : ''
+                      }`}
+                    />
+                    <span className="font-normal tracking-tight text-zinc-400 group-hover:text-zinc-200 text-xs sm:text-[13px]">
+                      lend an ear
+                    </span>
                   </button>
-                ))}
-              </div>
-            </div>
 
-            {/* Bottom Row */}
-            <div className="flex items-center justify-between text-xs pt-2 border-t border-zinc-800/80">
-              <div className="font-bold text-sm tracking-tight font-mono-code text-white">
-                [jays]
-              </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      uiSfx.playClick();
+                      setIsOpen(false);
+                    }}
+                    onMouseEnter={() => uiSfx.playHover()}
+                    className="font-normal text-white hover:text-zinc-300 transition-colors tracking-tight text-xs sm:text-[13px] cursor-pointer lowercase"
+                  >
+                    close
+                  </button>
+                </motion.div>
 
-              <div className="flex items-center gap-3.5 text-zinc-400 font-normal text-xs">
-                <a
-                  href="https://instagram.com/jasonn.doc"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:text-white transition-colors lowercase"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  instagram
-                </a>
-                <a
-                  href="https://github.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:text-white transition-colors lowercase"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  github
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
+                {/* Middle Main Navigation List: portfolio, identity, thought, evidence, leave a thought */}
+                <nav className="flex flex-col space-y-3 sm:space-y-3.5 my-auto pl-0.5">
+                  <motion.div variants={itemVariants}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNav(() => onScrollTo('projects'));
+                      }}
+                      onMouseEnter={() => uiSfx.playHover()}
+                      className="text-left text-[29px] sm:text-[35px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase block w-full"
+                    >
+                      portfolio
+                    </button>
+                  </motion.div>
+
+                  <motion.div variants={itemVariants}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNav(onOpenStory);
+                      }}
+                      onMouseEnter={() => uiSfx.playHover()}
+                      className="text-left text-[29px] sm:text-[35px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase block w-full"
+                    >
+                      identity
+                    </button>
+                  </motion.div>
+
+                  <motion.div variants={itemVariants}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNav(() => onScrollTo('thought'));
+                      }}
+                      onMouseEnter={() => uiSfx.playHover()}
+                      className="text-left text-[29px] sm:text-[35px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase block w-full"
+                    >
+                      thought
+                    </button>
+                  </motion.div>
+
+                  <motion.div variants={itemVariants}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNav(() => onScrollTo('stats'));
+                      }}
+                      onMouseEnter={() => uiSfx.playHover()}
+                      className="text-left text-[29px] sm:text-[35px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase block w-full"
+                    >
+                      evidence
+                    </button>
+                  </motion.div>
+
+                  <motion.div variants={itemVariants}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNav(onOpenContact);
+                      }}
+                      onMouseEnter={() => uiSfx.playHover()}
+                      className="text-left text-[29px] sm:text-[35px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase block w-full"
+                    >
+                      leave a thought
+                    </button>
+                  </motion.div>
+                </nav>
+
+                {/* Bottom Row: [ jason ]               instagram   github */}
+                <motion.div variants={itemVariants} className="flex items-center justify-between text-xs sm:text-[13px] pt-2">
+                  <span className="font-mono-code text-white text-xs sm:text-[13px] tracking-tight font-normal">
+                    [ jason ]
+                  </span>
+
+                  <div className="flex items-center gap-3.5 sm:gap-4 text-zinc-400 font-normal text-xs sm:text-[13px]">
+                    <a
+                      href="https://instagram.com/jasonn.doc"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:text-white transition-colors lowercase"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        uiSfx.playClick();
+                      }}
+                      onMouseEnter={() => uiSfx.playHover()}
+                    >
+                      instagram
+                    </a>
+                    <a
+                      href="https://github.com"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:text-white transition-colors lowercase"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        uiSfx.playClick();
+                      }}
+                      onMouseEnter={() => uiSfx.playHover()}
+                    >
+                      github
+                    </a>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </div>
     </>
   );
