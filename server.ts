@@ -12,6 +12,17 @@ const PORT = 3000;
 app.use(express.json({ limit: '64kb' }));
 app.use(express.urlencoded({ extended: true, limit: '64kb' }));
 
+// CORS & Preflight handler for all routes
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 // Trust proxy for accurate client IP resolution behind Cloud Run / Nginx
 app.set('trust proxy', true);
 
