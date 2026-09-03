@@ -486,7 +486,7 @@ export default function App() {
             {/* ------------------------------------------------------------- */}
             {/* HERO SECTION */}
             {/* ------------------------------------------------------------- */}
-            <section id="hero" className="relative pt-24 sm:pt-28 pb-16 overflow-hidden">
+            <section id="hero" className="relative pt-24 sm:pt-28 pb-8 overflow-hidden my-12">
         {/* Hero Top Metadata Row (Aligned with center photo width) */}
         <ScrollReveal delay={100} distance={20}>
           <div className="w-64 sm:w-80 md:w-96 mx-auto px-0 flex justify-between items-center text-xs sm:text-[13px] text-zinc-400 font-mono-code mb-8 sm:mb-12">
@@ -543,7 +543,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* ABOUT / INTRO SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="about" className="py-20 sm:py-32 px-6 sm:px-12 max-w-7xl mx-auto">
+      <section id="about" className="py-12 px-6 sm:px-12 max-w-7xl mx-auto mt-32 sm:mt-48 md:mt-60 mb-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-center">
           {/* Left Column: [hey, i'm] [steward jason liuwindra] */}
           <div className="md:col-span-3">
@@ -590,7 +590,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* PROJECTS SHOWCASE SECTION (3 CORE PROJECTS) */}
       {/* ------------------------------------------------------------- */}
-      <section id="projects" className="py-12 sm:py-20 border-t border-zinc-200/80">
+      <section id="projects" className="py-12 border-t border-zinc-200/80 mt-32 sm:mt-48 md:mt-60 mb-12">
         <div className="w-full">
           <div className="grid grid-cols-1 md:grid-cols-3 border-b border-zinc-200">
             {currentProjects.map((project, idx) => (
@@ -625,7 +625,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* PRINCIPLES SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="principles" className="py-24 sm:py-36 px-6 sm:px-12 max-w-5xl mx-auto">
+      <section id="principles" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto my-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
           <div className="md:col-span-4">
             <ScrollReveal delay={100} distance={20}>
@@ -649,7 +649,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* THOUGHT SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="thought" className="py-20 sm:py-28 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60">
+      <section id="thought" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60 my-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
           <div className="md:col-span-4">
             <ScrollReveal delay={100} distance={20}>
@@ -722,7 +722,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* SERVICES SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="services" className="py-20 sm:py-28 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60">
+      <section id="services" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60 my-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
           <div className="md:col-span-4 space-y-3">
             <ScrollReveal delay={100} distance={20}>
@@ -824,7 +824,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* STATS & IMPACT IN NUMBERS SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="stats" className="py-20 sm:py-28 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60">
+      <section id="stats" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60 my-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
           <div className="md:col-span-4 space-y-3">
             <ScrollReveal delay={100} distance={20}>
@@ -869,7 +869,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* FAQ SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="faq" className="py-20 sm:py-28 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60">
+      <section id="faq" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60 my-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
           <div className="md:col-span-4 space-y-3">
             <ScrollReveal delay={100} distance={20}>
@@ -962,7 +962,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* NOT THE END / EDITORIAL STATEMENT SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section className="py-28 sm:py-36 md:py-44 px-6 text-center max-w-2xl mx-auto space-y-7 sm:space-y-9">
+      <section className="py-12 px-6 text-center max-w-2xl mx-auto space-y-7 sm:space-y-9 my-12">
         <ScrollReveal delay={100} distance={20}>
           <div className="text-[12px] sm:text-xs text-zinc-400 font-mono-code lowercase tracking-wider">
             {t.buildTag || '[not the end]'}

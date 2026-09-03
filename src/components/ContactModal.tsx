@@ -5,6 +5,7 @@ import confetti from 'canvas-confetti';
 import { Language } from '../types';
 import { sendTelegramNotification } from '../utils/telegram';
 import { AntiSpamCaptcha, CaptchaRef } from './AntiSpamCaptcha';
+import { validateEmail, getFormStatusText } from '../utils/emailValidation';
 
 interface Props {
   isOpen: boolean;
@@ -20,8 +21,17 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
   const [sent, setSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false);
   const captchaRef = useRef<CaptchaRef>(null);
   const formMountTimeRef = useRef<number>(Date.now());
+
+  const hasName = name.trim().length > 0;
+  const hasMessage = message.trim().length > 0;
+  const hasEmail = email.trim().length > 0;
+  const emailValidation = validateEmail(email, lang);
+  const isEmailValid = emailValidation.isValid;
+
+  const isFormValid = hasName && hasMessage && hasEmail && isEmailValid && isCaptchaValid;
 
   if (!isOpen) return null;
 
@@ -36,6 +46,12 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+
+    const emailVal = validateEmail(email, lang);
+    if (!emailVal.isValid) {
+      setErrorMessage(emailVal.errorReason || (lang === 'id' ? 'Email tidak valid.' : 'Invalid email address.'));
+      return;
+    }
 
     if (captchaRef.current && !captchaRef.current.validate()) {
       return;
@@ -259,16 +275,9 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
             </div>
 
             {/* Anti-Spam Captcha Challenge */}
-            <AntiSpamCaptcha ref={captchaRef} lang={lang} />
+            <AntiSpamCaptcha ref={captchaRef} lang={lang} onValidationChange={(valid) => setIsCaptchaValid(valid)} />
 
-            {/* Error message */}
-            {errorMessage && (
-              <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono-code">
-                {errorMessage}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               <div className="flex items-center gap-3 text-xs text-zinc-500">
                 <a 
                   href="https://instagram.com/jasonn.doc" 
@@ -288,14 +297,26 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
                 </a>
               </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-5 py-2.5 bg-black hover:bg-zinc-800 text-white rounded-full text-xs font-semibold flex items-center gap-2 transition-transform active:scale-95 shadow-md cursor-pointer disabled:opacity-60"
-              >
-                <span>{isSubmitting ? 'Mengirim...' : current.sendMessage}</span>
-                <Send size={13} />
-              </button>
+              <div className="flex items-center gap-3">
+                {!isFormValid && !isSubmitting && (
+                  <span className="text-xs font-mono-code text-zinc-400 lowercase select-none">
+                    {getFormStatusText(hasName, hasMessage, hasEmail, isEmailValid, isCaptchaValid, email, lang)}
+                  </span>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={!isFormValid || isSubmitting}
+                  className={`px-5 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all duration-200 ${
+                    isFormValid && !isSubmitting
+                      ? 'bg-black hover:bg-zinc-800 text-white cursor-pointer active:scale-95 shadow-md'
+                      : 'bg-zinc-200 text-zinc-400 cursor-not-allowed select-none'
+                  }`}
+                >
+                  <span>{isSubmitting ? 'Mengirim...' : current.sendMessage}</span>
+                  <Send size={13} />
+                </button>
+              </div>
             </div>
           </form>
         )}

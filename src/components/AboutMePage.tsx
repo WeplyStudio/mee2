@@ -381,10 +381,10 @@ export const AboutMePage: React.FC<Props> = ({
   return (
     <div className="min-h-screen bg-[#fafaf9] text-[#121212] pt-24 pb-20 px-4 sm:px-8 max-w-5xl mx-auto flex flex-col justify-between animate-in fade-in duration-700 relative">
       
-      <div className="space-y-20 sm:space-y-32">
+      <div className="space-y-12">
         
         {/* SECTION 1: EDITORIAL 3-PHOTO COLLAGE AS IN THE SCREENSHOT & VIDEO */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start my-12">
           {/* Column 1 (Left) */}
           <div className="md:col-span-4 space-y-8 flex flex-col justify-start">
             {/* Top Left Photo - Hidden on mobile, shown on desktop */}

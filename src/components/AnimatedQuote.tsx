@@ -5,9 +5,15 @@ interface Props {
   text: string;
   onOpenStory: () => void;
   myStoryLabel: string;
+  className?: string;
 }
 
-export const AnimatedQuote: React.FC<Props> = ({ text, onOpenStory, myStoryLabel }) => {
+export const AnimatedQuote: React.FC<Props> = ({
+  text,
+  onOpenStory,
+  myStoryLabel,
+  className = "mt-48 sm:mt-64 md:mt-80 text-center max-w-2xl mx-auto space-y-8 px-4",
+}) => {
   const { ref, progress } = useScrollProgress();
 
   const safeProgress = typeof progress === 'number' && !Number.isNaN(progress) ? Math.max(0, Math.min(1, progress)) : 0;
@@ -20,7 +26,7 @@ export const AnimatedQuote: React.FC<Props> = ({ text, onOpenStory, myStoryLabel
   const opacity = Math.max(0, Math.min(1, 0.25 + 0.75 * safeProgress));
 
   return (
-    <div ref={ref} className="mt-28 sm:mt-36 text-center max-w-2xl mx-auto space-y-8 px-4">
+    <div ref={ref} className={className}>
       {/* Animated Paragraph */}
       <p
         className="text-sm sm:text-base md:text-lg leading-relaxed font-normal tracking-wide transition-transform duration-300 ease-out"

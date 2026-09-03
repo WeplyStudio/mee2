@@ -5,131 +5,120 @@ import { TRANSLATIONS } from '../data/portfolioData';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { sendTelegramNotification } from '../utils/telegram';
 import { AntiSpamCaptcha, CaptchaRef } from './AntiSpamCaptcha';
+import { validateEmail, getFormStatusText } from '../utils/emailValidation';
 
 interface ContactPageProps {
   lang: Language;
-  onNavigateHome: () => void;
+  onNavigateHome?: () => void;
 }
 
-export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }) => {
-  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
-
+export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   const [formData, setFormData] = useState({
     name: '',
-    company: '',
     email: '',
-    phone: '',
-    subject: '',
     message: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false);
   const captchaRef = useRef<CaptchaRef>(null);
   const formMountTimeRef = useRef<number>(Date.now());
 
+  const hasName = formData.name.trim().length > 0;
+  const hasMessage = formData.message.trim().length > 0;
+  const hasEmail = formData.email.trim().length > 0;
+  const emailValidation = validateEmail(formData.email, lang);
+  const isEmailValid = emailValidation.isValid;
+
+  const isFormValid = hasName && hasMessage && hasEmail && isEmailValid && isCaptchaValid;
+
   const localizedContent = {
     id: {
-      headline: 'silakan hubungi saya untuk menjadwalkan pertemuan daring atau mengajukan pertanyaan apapun.',
-      subheadline: 'senang berbicara tentang ide baru, pengembangan produk, atau sistem desain antarmuka pengguna.',
-      talkLabel: "[mari berbincang]",
-      contactLabel: '[kontak]',
-      connectLabel: '[terhubung]',
-      nameLabel: 'nama lengkap',
-      namePlaceholder: 'steward jason liuwindra',
-      companyLabel: 'perusahaan / instansi',
-      companyPlaceholder: 'apple computer, inc.',
-      emailLabel: 'email',
-      emailPlaceholder: 'contoh@domain.com',
-      phoneLabel: 'telepon / whatsapp',
-      phonePlaceholder: '+62 812 3456 7890',
-      subjectLabel: 'subjek',
-      subjectPlaceholder: 'aplikasi web, aplikasi seluler, desain ui/ux',
-      messageLabel: 'pesan',
-      messagePlaceholder: 'jelaskan apa pun yang ingin anda diskusikan.',
-      btnSubmit: 'mari mulai bekerja sama',
-      btnSending: 'mengirimkan...',
-      successTitle: 'pesan anda berhasil terkirim!',
-      successDesc: 'saya akan segera menghubungi anda kembali. terima kasih atas waktunya.',
-      sendAnother: 'kirim pesan lain',
+      tag: '[tulis untuk saya]',
+      headline: 'saya membaca semua yang anda tulis.',
+      subheadline: 'saya tidak bisa membalas semuanya secara langsung.',
+      helloPrefix: 'halo jason, saya',
+      namePlaceholder: 'nama anda',
+      writeTopic: 'apa yang ingin saya tuliskan kepada anda',
+      messagePlaceholder: 'apa pun yang ada di pikiran anda.',
+      reachPrefix: 'anda dapat menghubungi saya di',
+      emailPlaceholder: 'email anda',
+      btnSend: 'kirim',
+      btnSending: 'mengirim...',
+      contactTag: '[kontak]',
+      connectTag: '[terhubung]',
+      email: 'hello@itsjason.my.id',
+      socials: 'instagram, github',
+      successTitle: 'pesan anda terkirim!',
+      successDesc: 'terima kasih sudah menulis pesan. saya akan membacanya secepatnya.',
+      sendAnother: 'tulis pesan lain',
     },
     en: {
-      headline: 'please contact me to set up an online meeting or ask any questions you have.',
-      subheadline: 'happy to discuss new ideas, product engineering, or interface design systems.',
-      talkLabel: "[let's talk]",
-      contactLabel: '[contact]',
-      connectLabel: '[connect]',
-      nameLabel: 'name, surname',
-      namePlaceholder: 'steward jason liuwindra',
-      companyLabel: 'company',
-      companyPlaceholder: 'apple computer, inc.',
-      emailLabel: 'email',
-      emailPlaceholder: 'example@example.com',
-      phoneLabel: 'phone',
-      phonePlaceholder: '+1 (555) 000-0000',
-      subjectLabel: 'subject',
-      subjectPlaceholder: 'web app, mobile app, ui/ux design',
-      messageLabel: 'message',
-      messagePlaceholder: 'describe whatever you want.',
-      btnSubmit: "let's get started",
+      tag: '[write to me]',
+      headline: 'i read everything you write.',
+      subheadline: "i can't answer all of it right away.",
+      helloPrefix: "hello jason, i'm",
+      namePlaceholder: 'your name',
+      writeTopic: 'what i wanted to write to you',
+      messagePlaceholder: 'whatever is on your mind.',
+      reachPrefix: 'you can reach me at',
+      emailPlaceholder: 'your email',
+      btnSend: 'send',
       btnSending: 'sending...',
-      successTitle: 'message sent successfully!',
-      successDesc: 'i will get back to you as soon as possible. thank you for reaching out.',
-      sendAnother: 'send another message',
+      contactTag: '[contact]',
+      connectTag: '[connect]',
+      email: 'hello@itsjason.my.id',
+      socials: 'instagram, github',
+      successTitle: 'message sent!',
+      successDesc: 'thank you for reaching out. i will read your message as soon as possible.',
+      sendAnother: 'write another message',
     },
     de: {
-      headline: 'kontaktieren sie mich gerne für ein online-meeting oder bei offenen fragen.',
-      subheadline: 'ich freue mich darauf, neue ideen, produktentwicklung oder designsysteme zu besprechen.',
-      talkLabel: '[gesprech]',
-      contactLabel: '[kontakt]',
-      connectLabel: '[verbinden]',
-      nameLabel: 'vor- und nachname',
-      namePlaceholder: 'steward jason liuwindra',
-      companyLabel: 'unternehmen',
-      companyPlaceholder: 'apple computer, inc.',
-      emailLabel: 'e-mail',
-      emailPlaceholder: 'beispiel@domain.de',
-      phoneLabel: 'telefonnummer',
-      phonePlaceholder: '+49 170 1234567',
-      subjectLabel: 'betreff',
-      subjectPlaceholder: 'web-app, mobile app, ui/ux design',
-      messageLabel: 'nachricht',
-      messagePlaceholder: 'beschreiben sie ihr anliegen oder projekt.',
-      btnSubmit: 'lassen sie uns starten',
+      tag: '[schreib mir]',
+      headline: 'ich lese alles, was du schreibst.',
+      subheadline: 'ich kann nicht sofort auf alles antworten.',
+      helloPrefix: 'hallo jason, ich bin',
+      namePlaceholder: 'dein name',
+      writeTopic: 'was ich dir schreiben wollte',
+      messagePlaceholder: 'was auch immer dir auf dem herzen liegt.',
+      reachPrefix: 'du erreichst mich unter',
+      emailPlaceholder: 'deine e-mail',
+      btnSend: 'senden',
       btnSending: 'wird gesendet...',
-      successTitle: 'nachricht erfolgreich übermittelt!',
-      successDesc: 'ich werde mich so schnell wie möglich bei ihnen melden. vielen dank.',
-      sendAnother: 'weitere nachricht senden',
+      contactTag: '[kontakt]',
+      connectTag: '[verbinden]',
+      email: 'hello@itsjason.my.id',
+      socials: 'instagram, github',
+      successTitle: 'nachricht gesendet!',
+      successDesc: 'vielen dank für deine nachricht. ich werde sie baldmöglichst lesen.',
+      sendAnother: 'weitere nachricht schreiben',
     },
     ja: {
-      headline: 'オンラインでのご相談やご質問など、お気軽にお問い合わせください。',
-      subheadline: '新規プロジェクト、プロダクト開発、UI/UXデザインシステムについてディスカッションしましょう。',
-      talkLabel: '[お問い合わせ]',
-      contactLabel: '[連絡先]',
-      connectLabel: '[ソーシャル]',
-      nameLabel: 'お名前',
-      namePlaceholder: 'スチュワード・ジェイソン',
-      companyLabel: '貴社名・組織名',
-      companyPlaceholder: 'アップルコンピュータ株式会社',
-      emailLabel: 'メールアドレス',
-      emailPlaceholder: 'sample@example.com',
-      phoneLabel: 'お電話番号',
-      phonePlaceholder: '+81 90 1234 5678',
-      subjectLabel: 'ご相談内容（件名）',
-      subjectPlaceholder: 'Webアプリ、モバイル開発、UI/UXデザイン設計',
-      messageLabel: 'メッセージ本文',
-      messagePlaceholder: 'プロジェクトの概要やご要望をご記入ください。',
-      btnSubmit: 'プロジェクトを始める',
+      tag: '[メッセージを送信]',
+      headline: 'いただいたメッセージはすべて拝読しています。',
+      subheadline: 'すぐにご返信できない場合がございます。',
+      helloPrefix: 'ジェイソンさん、こんにちは。私は',
+      namePlaceholder: 'お名前',
+      writeTopic: 'お伝えしたいこと',
+      messagePlaceholder: 'ご自由にご記入ください。',
+      reachPrefix: '連絡先メールアドレスは',
+      emailPlaceholder: 'メールアドレス',
+      btnSend: '送信',
       btnSending: '送信中...',
-      successTitle: 'メッセージが正常に送信されました！',
-      successDesc: '内容を確認の上、速やかにご返信いたします。お問い合わせありがとうございます。',
-      sendAnother: '別のメッセージを送信する',
-    }
+      contactTag: '[連絡先]',
+      connectTag: '[ソーシャル]',
+      email: 'hello@itsjason.my.id',
+      socials: 'instagram, github',
+      successTitle: '送信完了！',
+      successDesc: 'メッセージを送信しました。確認次第、ご連絡いたします。',
+      sendAnother: '別のメッセージを書く',
+    },
   };
 
   const c = localizedContent[lang] || localizedContent.en;
@@ -143,17 +132,31 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
       return;
     }
 
+    if (!formData.name.trim()) {
+      setErrorMessage(lang === 'id' ? 'Nama wajib diisi.' : 'Name is required.');
+      return;
+    }
+
+    const emailVal = validateEmail(formData.email, lang);
+    if (!emailVal.isValid) {
+      setErrorMessage(emailVal.errorReason || (lang === 'id' ? 'Email tidak valid.' : 'Invalid email address.'));
+      return;
+    }
+
+    if (!formData.message.trim()) {
+      setErrorMessage(lang === 'id' ? 'Pesan wajib diisi.' : 'Message is required.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const result = await sendTelegramNotification({
         name: formData.name,
-        company: formData.company,
         email: formData.email,
-        phone: formData.phone,
-        subject: formData.subject,
         message: formData.message,
-        source: 'Full Contact Page (/contact)',
+        subject: 'Contact Form Message',
+        source: 'Conversational Contact Page (/contact)',
         honeypot: captchaRef.current?.getHoneypotValue() || '',
         formLoadTime: formMountTimeRef.current,
       });
@@ -162,10 +165,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
         setIsSuccess(true);
         setFormData({
           name: '',
-          company: '',
           email: '',
-          phone: '',
-          subject: '',
           message: '',
         });
         captchaRef.current?.reset();
@@ -180,211 +180,180 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
   };
 
   return (
-    <div className="pt-28 sm:pt-36 pb-20 max-w-7xl mx-auto px-6 sm:px-12">
-      {/* Main Grid matching the exact reference UI */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 sm:gap-16 items-start pb-24 border-b border-zinc-200/80">
+    <div className="min-h-screen bg-[#fafaf9] text-zinc-800 pt-24 sm:pt-28 pb-12 px-6 sm:px-12 md:px-16 max-w-7xl mx-auto flex flex-col justify-between selection:bg-zinc-200">
+      
+      {/* Top Center Tag */}
+      <div className="text-center pt-2 pb-12">
+        <ScrollReveal delay={100} distance={10}>
+          <span className="text-[12px] sm:text-xs text-zinc-400 font-mono-code lowercase tracking-wider">
+            {c.tag}
+          </span>
+        </ScrollReveal>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start my-auto py-8">
         
-        {/* Left Column: Headline statement */}
-        <div className="lg:col-span-5 space-y-6">
-          <ScrollReveal delay={100} distance={20}>
-            <h1 className="text-2xl sm:text-3xl md:text-3.5xl font-extrabold tracking-tight text-zinc-900 leading-[1.35] lowercase">
+        {/* Left Column Statement */}
+        <div className="lg:col-span-4 space-y-2">
+          <ScrollReveal delay={150} distance={15}>
+            <h1 className="text-base sm:text-lg md:text-xl font-normal text-zinc-800 tracking-tight lowercase">
               {c.headline}
             </h1>
           </ScrollReveal>
-
-          <ScrollReveal delay={180} distance={20}>
-            <p className="text-xs sm:text-sm text-zinc-500 font-mono-code leading-relaxed max-w-sm lowercase">
+          <ScrollReveal delay={200} distance={15}>
+            <p className="text-xs sm:text-sm text-zinc-400 font-normal lowercase leading-relaxed">
               {c.subheadline}
             </p>
           </ScrollReveal>
         </div>
 
-        {/* Right Column: [let's talk] & Form */}
-        <div className="lg:col-span-7 space-y-8">
-          <ScrollReveal delay={120} distance={15}>
-            <div className="text-[11px] font-mono-code text-zinc-400 lowercase tracking-wider">
-              {c.talkLabel}
-            </div>
-          </ScrollReveal>
-
+        {/* Center Conversational Form Column */}
+        <div className="lg:col-span-7 lg:col-start-6">
           {isSuccess ? (
-            <ScrollReveal delay={100} distance={20}>
-              <div className="p-8 sm:p-10 rounded-2xl bg-zinc-50 border border-zinc-200/80 space-y-4">
-                <div className="flex items-center gap-3 text-emerald-600">
-                  <CheckCircle2 size={24} />
-                  <span className="font-bold text-base lowercase">
-                    {c.successTitle}
-                  </span>
+            <ScrollReveal delay={100} distance={15}>
+              <div className="p-8 rounded-2xl bg-zinc-100/80 border border-zinc-200/80 space-y-4 max-w-md">
+                <div className="flex items-center gap-2.5 text-zinc-900 font-medium text-sm lowercase">
+                  <CheckCircle2 size={18} className="text-emerald-600" />
+                  <span>{c.successTitle}</span>
                 </div>
-                <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed lowercase">
+                <p className="text-xs text-zinc-600 leading-relaxed lowercase">
                   {c.successDesc}
                 </p>
-                <div className="pt-2">
-                  <button
-                    onClick={() => setIsSuccess(false)}
-                    className="text-xs font-mono-code text-zinc-900 underline hover:text-blue-700 cursor-pointer lowercase"
-                  >
-                    {c.sendAnother}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSuccess(false)}
+                  className="text-xs font-mono-code text-zinc-900 underline hover:text-zinc-600 transition-colors cursor-pointer lowercase pt-2"
+                >
+                  {c.sendAnother}
+                </button>
               </div>
             </ScrollReveal>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6 max-w-xl">
-              {/* Field: Name, Surname */}
-              <ScrollReveal delay={150} distance={15}>
-                <div className="space-y-1.5">
-                  <label className="block text-xs sm:text-[13px] font-mono-code text-zinc-900 lowercase font-medium">
-                    {c.nameLabel}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder={c.namePlaceholder}
-                    className="w-full bg-transparent border-b border-zinc-300 pb-2 text-xs sm:text-sm text-zinc-900 placeholder:text-zinc-300 focus:outline-hidden focus:border-zinc-900 transition-colors lowercase"
-                  />
+            <form onSubmit={handleSubmit} className="space-y-8 max-w-lg">
+              <ScrollReveal delay={200} distance={15}>
+                <div className="space-y-6 text-base sm:text-lg md:text-xl font-normal text-zinc-800 leading-relaxed lowercase">
+                  
+                  {/* Sentence 1: Hello jason, i'm [your name]. */}
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-2">
+                    <span>{c.helloPrefix}</span>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder={c.namePlaceholder}
+                      className="bg-transparent border-b border-zinc-300 focus:border-zinc-800 text-zinc-900 placeholder:text-zinc-300 focus:outline-hidden px-1 py-0.5 text-base sm:text-lg md:text-xl font-normal transition-colors min-w-[160px] inline-block lowercase"
+                    />
+                    <span>.</span>
+                  </div>
+
+                  {/* Sentence 2: What i wanted to write to you */}
+                  <div>
+                    <span className="block text-zinc-800">{c.writeTopic}</span>
+                  </div>
+
+                  {/* Sentence 3: "whatever is on your mind." */}
+                  <div className="relative pt-1 pb-2">
+                    <span className="text-zinc-300 text-2xl font-serif select-none mr-1.5 align-top">“</span>
+                    <textarea
+                      rows={2}
+                      required
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      placeholder={c.messagePlaceholder}
+                      className="w-[90%] sm:w-[92%] bg-transparent border-b border-zinc-300 focus:border-zinc-800 text-zinc-900 placeholder:text-zinc-300 focus:outline-hidden px-1 py-1 text-base sm:text-lg md:text-xl font-normal transition-colors resize-none leading-relaxed inline-block lowercase"
+                    />
+                    <span className="text-zinc-300 text-2xl font-serif select-none ml-1 align-bottom">”</span>
+                  </div>
+
+                  {/* Sentence 4: You can reach me at [your email]. */}
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-2 pt-2">
+                    <span>{c.reachPrefix}</span>
+                    <input
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder={c.emailPlaceholder}
+                      className="bg-transparent border-b border-zinc-300 focus:border-zinc-800 text-zinc-900 placeholder:text-zinc-300 focus:outline-hidden px-1 py-0.5 text-base sm:text-lg md:text-xl font-normal transition-colors min-w-[200px] inline-block lowercase"
+                    />
+                    <span>.</span>
+                  </div>
+
+                  {/* Sentence 5 (Anti-Spam Verification as conversational sentence): and to prove i'm human... */}
+                  <div className="pt-2">
+                    <AntiSpamCaptcha
+                      ref={captchaRef}
+                      lang={lang}
+                      variant="conversational"
+                      onValidationChange={(valid) => setIsCaptchaValid(valid)}
+                    />
+                  </div>
+
                 </div>
               </ScrollReveal>
 
-              {/* Field: Company */}
-              <ScrollReveal delay={180} distance={15}>
-                <div className="space-y-1.5">
-                  <label className="block text-xs sm:text-[13px] font-mono-code text-zinc-900 lowercase font-medium">
-                    {c.companyLabel}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    placeholder={c.companyPlaceholder}
-                    className="w-full bg-transparent border-b border-zinc-300 pb-2 text-xs sm:text-sm text-zinc-900 placeholder:text-zinc-300 focus:outline-hidden focus:border-zinc-900 transition-colors lowercase"
-                  />
-                </div>
-              </ScrollReveal>
-
-              {/* Field: Email */}
-              <ScrollReveal delay={210} distance={15}>
-                <div className="space-y-1.5">
-                  <label className="block text-xs sm:text-[13px] font-mono-code text-zinc-900 lowercase font-medium">
-                    {c.emailLabel}
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder={c.emailPlaceholder}
-                    className="w-full bg-transparent border-b border-zinc-300 pb-2 text-xs sm:text-sm text-zinc-900 placeholder:text-zinc-300 focus:outline-hidden focus:border-zinc-900 transition-colors lowercase"
-                  />
-                </div>
-              </ScrollReveal>
-
-              {/* Field: Phone */}
-              <ScrollReveal delay={240} distance={15}>
-                <div className="space-y-1.5">
-                  <label className="block text-xs sm:text-[13px] font-mono-code text-zinc-900 lowercase font-medium">
-                    {c.phoneLabel}
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                    placeholder={c.phonePlaceholder}
-                    className="w-full bg-transparent border-b border-zinc-300 pb-2 text-xs sm:text-sm text-zinc-900 placeholder:text-zinc-300 focus:outline-hidden focus:border-zinc-900 transition-colors lowercase font-mono-code"
-                  />
-                </div>
-              </ScrollReveal>
-
-              {/* Field: Subject */}
-              <ScrollReveal delay={270} distance={15}>
-                <div className="space-y-1.5">
-                  <label className="block text-xs sm:text-[13px] font-mono-code text-zinc-900 lowercase font-medium">
-                    {c.subjectLabel}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    placeholder={c.subjectPlaceholder}
-                    className="w-full bg-transparent border-b border-zinc-300 pb-2 text-xs sm:text-sm text-zinc-900 placeholder:text-zinc-300 focus:outline-hidden focus:border-zinc-900 transition-colors lowercase"
-                  />
-                </div>
-              </ScrollReveal>
-
-              {/* Field: Message */}
-              <ScrollReveal delay={300} distance={15}>
-                <div className="space-y-1.5">
-                  <label className="block text-xs sm:text-[13px] font-mono-code text-zinc-900 lowercase font-medium">
-                    {c.messageLabel}
-                  </label>
-                  <textarea
-                    rows={3}
-                    required
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    placeholder={c.messagePlaceholder}
-                    className="w-full bg-transparent border-b border-zinc-300 pb-2 text-xs sm:text-sm text-zinc-900 placeholder:text-zinc-300 focus:outline-hidden focus:border-zinc-900 transition-colors resize-none lowercase"
-                  />
-                </div>
-              </ScrollReveal>
-
-              {/* Anti-Spam Security Captcha */}
-              <ScrollReveal delay={320} distance={15}>
-                <div className="pt-2">
-                  <AntiSpamCaptcha ref={captchaRef} lang={lang} />
-                </div>
-              </ScrollReveal>
-
-              {/* Error Message Display */}
-              {errorMessage && (
-                <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono-code">
-                  {errorMessage}
-                </div>
-              )}
-
-              {/* Purple pill button matching screenshot */}
-              <ScrollReveal delay={340} distance={15}>
-                <div className="pt-3">
+              {/* Submit Button & Plain Status Text */}
+              <ScrollReveal delay={280} distance={15}>
+                <div className="pt-2 flex flex-wrap items-center gap-3.5">
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#a855f7] hover:bg-[#9333ea] text-white text-xs font-mono-code transition-all duration-300 shadow-md shadow-purple-500/20 active:scale-95 cursor-pointer lowercase disabled:opacity-70"
+                    disabled={!isFormValid || isSubmitting}
+                    className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-mono-code transition-all duration-300 lowercase ${
+                      isFormValid && !isSubmitting
+                        ? 'bg-zinc-800 hover:bg-black text-white cursor-pointer active:scale-95 shadow-xs'
+                        : 'bg-zinc-300 text-zinc-500 cursor-not-allowed select-none opacity-80'
+                    }`}
                   >
                     {isSubmitting ? (
-                      <Loader2 size={13} className="animate-spin" />
+                      <Loader2 size={12} className="animate-spin" />
                     ) : (
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isFormValid ? 'bg-emerald-400' : 'bg-zinc-400'}`}></span>
                     )}
-                    <span>• {isSubmitting ? c.btnSending : c.btnSubmit}</span>
+                    <span>{isSubmitting ? c.btnSending : c.btnSend}</span>
                   </button>
+
+                  {/* Plain unadorned text notice right beside the button */}
+                  {!isFormValid && !isSubmitting && (
+                    <span className="text-xs font-mono-code text-zinc-400 lowercase select-none">
+                      {getFormStatusText(hasName, hasMessage, hasEmail, isEmailValid, isCaptchaValid, formData.email, lang)}
+                    </span>
+                  )}
+
+                  {errorMessage && isFormValid && (
+                    <span className="text-xs font-mono-code text-rose-500 lowercase">
+                      {errorMessage}
+                    </span>
+                  )}
                 </div>
               </ScrollReveal>
+
             </form>
           )}
         </div>
+
       </div>
 
-      {/* Middle Direct Links Row matching screenshot */}
-      <ScrollReveal delay={200} distance={20}>
-        <div className="py-12 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 text-xs font-mono-code">
-          {/* Left direct contact */}
-          <div className="flex items-center gap-4">
-            <span className="text-zinc-400 lowercase">{c.contactLabel}</span>
+      {/* Bottom Footer Section */}
+      <ScrollReveal delay={300} distance={15}>
+        <div className="pt-16 pb-4 border-t border-zinc-200/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs font-mono-code text-zinc-400">
+          
+          {/* Left: [contact] hello@itsjason.my.id */}
+          <div className="flex items-center gap-3">
+            <span className="lowercase">{c.contactTag}</span>
             <a
-              href="mailto:hello@itsjason.my.id"
-              className="text-zinc-800 hover:text-black transition-colors font-medium lowercase"
+              href={`mailto:${c.email}`}
+              className="text-zinc-800 hover:text-black transition-colors font-sans lowercase font-normal"
             >
-              hello@itsjason.my.id
+              {c.email}
             </a>
           </div>
 
-          {/* Right social connect */}
-          <div className="flex items-center gap-4">
-            <span className="text-zinc-400 lowercase">{c.connectLabel}</span>
-            <div className="flex items-center gap-3 text-zinc-800">
+          {/* Right: [connect] instagram, github */}
+          <div className="flex items-center gap-3">
+            <span className="lowercase">{c.connectTag}</span>
+            <div className="flex items-center gap-2 text-zinc-800 font-sans font-normal">
               <a
                 href="https://instagram.com/jasonn.doc"
                 target="_blank"
@@ -404,6 +373,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang, onNavigateHome }
               </a>
             </div>
           </div>
+
         </div>
       </ScrollReveal>
 

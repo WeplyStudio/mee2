@@ -13,22 +13,27 @@ export const InteractiveBrandName: React.FC<InteractiveBrandNameProps> = ({
   fullName = 'steward jason liuwindra',
   className = '',
 }) => {
-  // 3-step cycle: [jason] -> [steward jason liuwindra] -> [     ] -> [jason]
-  const [stateIndex, setStateIndex] = useState<number>(0);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+  const [isToggled, setIsToggled] = useState<boolean>(false);
 
-  const states = [
-    { key: 'short', text: shortName },
-    { key: 'full', text: fullName },
-    { key: 'empty', text: '' },
-  ];
+  // Expanded on desktop hover OR on touch/click toggle for mobile accessibility
+  const isExpanded = isHovered || isToggled;
+  const currentText = isExpanded ? fullName : shortName;
 
-  const current = states[stateIndex];
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    uiSfx.playHover();
+  };
 
-  const handleToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
     uiSfx.playClick();
-    setStateIndex((prev) => (prev + 1) % states.length);
+    setIsToggled((prev) => !prev);
   };
 
   return (
@@ -39,17 +44,18 @@ export const InteractiveBrandName: React.FC<InteractiveBrandNameProps> = ({
       <motion.button
         type="button"
         layout="position"
-        onClick={handleToggle}
-        onMouseEnter={() => uiSfx.playHover()}
+        onClick={handleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         className="group relative inline-flex items-center justify-center font-sans tracking-tight text-2xl sm:text-4xl md:text-5xl select-none cursor-pointer focus:outline-hidden py-1 px-3 rounded-xl h-[56px] sm:h-[68px] md:h-[76px]"
-        whileTap={{ scale: 0.96 }}
+        whileTap={{ scale: 0.97 }}
         whileHover={{ scale: 1.01 }}
         transition={{
           layout: { type: 'spring', stiffness: 350, damping: 28 },
         }}
         style={{ overflowAnchor: 'none' }}
-        aria-label={`Interactive name: ${current.text || 'empty'}. Click to cycle name.`}
-        title="click to change"
+        aria-label={`Interactive name: ${currentText}`}
+        title="hover to view full name"
       >
         {/* Opening bracket */}
         <motion.span
@@ -71,30 +77,19 @@ export const InteractiveBrandName: React.FC<InteractiveBrandNameProps> = ({
           }}
         >
           <AnimatePresence mode="wait" initial={false}>
-            {current.text !== '' ? (
-              <motion.span
-                key={current.key}
-                initial={{ opacity: 0, y: 4, filter: 'blur(3px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, y: -4, filter: 'blur(3px)' }}
-                transition={{
-                  duration: 0.18,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-                className="text-zinc-900 font-medium px-0.5 tracking-tight lowercase whitespace-nowrap"
-              >
-                {current.text}
-              </motion.span>
-            ) : (
-              <motion.span
-                key="empty-space"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="inline-block w-8 sm:w-16 h-4 pointer-events-none"
-              />
-            )}
+            <motion.span
+              key={currentText}
+              initial={{ opacity: 0, y: 4, filter: 'blur(3px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: -4, filter: 'blur(3px)' }}
+              transition={{
+                duration: 0.18,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="text-zinc-900 font-medium px-0.5 tracking-tight lowercase whitespace-nowrap"
+            >
+              {currentText}
+            </motion.span>
           </AnimatePresence>
         </motion.span>
 
