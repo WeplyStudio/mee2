@@ -345,7 +345,7 @@ export default function App() {
     setIsAudioPlaying(active);
   };
 
-  // Synchronize document language, dynamic title, canonical URL, and open graph URLs for SEO
+  // Synchronize document language, dynamic title with typewriter typing effect, canonical URL, and open graph URLs for SEO
   useEffect(() => {
     document.documentElement.lang = lang;
     let pageTitle = 'Jason — Designer & Software Engineer';
@@ -362,7 +362,21 @@ export default function App() {
       pageTitle = '404 Not Found — Jason';
     }
 
-    document.title = pageTitle;
+    // Typewriter effect on document.title on initial load & page change
+    let index = 0;
+    let timerId: ReturnType<typeof setInterval> | null = null;
+
+    document.title = '';
+
+    timerId = setInterval(() => {
+      index++;
+      if (index <= pageTitle.length) {
+        document.title = pageTitle.slice(0, index) + (index < pageTitle.length ? ' |' : '');
+      } else {
+        document.title = pageTitle;
+        if (timerId) clearInterval(timerId);
+      }
+    }, 45);
 
     // Dynamically update Canonical and OpenGraph URLs to match current live hostname
     if (typeof window !== 'undefined') {
@@ -380,6 +394,10 @@ export default function App() {
         twitterUrlEl.setAttribute('content', currentUrl);
       }
     }
+
+    return () => {
+      if (timerId) clearInterval(timerId);
+    };
   }, [lang, currentPage, activeProject]);
 
   const scrollToSection = (id: string) => {
