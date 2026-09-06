@@ -410,19 +410,8 @@ export default function App() {
       {/* TOP FLOATING / STICKY HEADER */}
       {/* ------------------------------------------------------------- */}
       <header className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 sm:py-5 flex items-center justify-between pointer-events-none transition-all">
-        {/* Left: • get in touch (Desktop) */}
-        <div className="flex-1 flex justify-start">
-          <button
-            onClick={() => {
-              uiSfx.playSwitch();
-              navigateTo('contact');
-            }}
-            className="hidden sm:inline-flex pointer-events-auto group items-center gap-2 text-xs sm:text-[13px] font-medium text-zinc-800 hover:text-black transition-all cursor-pointer"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 group-hover:scale-125 transition-transform"></span>
-            <span className="tracking-tight lowercase">{t.getInTouch}</span>
-          </button>
-        </div>
+        {/* Left: empty spacer */}
+        <div className="flex-1 flex justify-start"></div>
 
         {/* Center / Primary: [ ] Morphing Menu Button to Card */}
         <div className="flex justify-center">
