@@ -111,8 +111,51 @@
       ]
     }
     </script>
+    <!-- Immediate early protection against Ctrl+U, Right-click on images, and Copying -->
+    <script>
+      (function() {
+        // Intercept right click on images and context menu
+        document.addEventListener('contextmenu', function(e) {
+          var t = e.target;
+          if (t && (t.tagName === 'IMG' || t.tagName === 'PICTURE' || t.tagName === 'SVG' || t.tagName === 'CANVAS' || t.closest('img, picture, svg, figure, canvas, [role="img"]'))) {
+            e.preventDefault();
+            return false;
+          }
+          if (t && (t.tagName !== 'INPUT' && t.tagName !== 'TEXTAREA' && !t.isContentEditable)) {
+            e.preventDefault();
+            return false;
+          }
+        }, true);
+
+        // Intercept Ctrl+U, Cmd+U, F12, DevTools shortcuts
+        window.addEventListener('keydown', function(e) {
+          var isCtrl = e.ctrlKey || e.metaKey;
+          var key = (e.key || '').toLowerCase();
+          var code = e.keyCode || e.which;
+          if (isCtrl && (key === 'u' || code === 85)) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+          if (code === 123 || (isCtrl && e.shiftKey && (key === 'i' || key === 'j' || key === 'c'))) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        }, true);
+
+        // Intercept text dragging and copying
+        document.addEventListener('copy', function(e) {
+          var t = e.target;
+          if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'TEXTAREA' && !t.isContentEditable)) {
+            e.preventDefault();
+            return false;
+          }
+        }, true);
+      })();
+    </script>
   </head>
-  <body class="bg-[#fbfbfb] text-[#111111] antialiased selection:bg-black selection:text-white overflow-x-hidden">
+  <body class="bg-[#fbfbfb] text-[#111111] antialiased select-none overflow-x-hidden" oncontextmenu="return false;">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
