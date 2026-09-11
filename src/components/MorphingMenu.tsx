@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Language } from '../types';
 import { uiSfx } from '../utils/audio';
@@ -63,6 +63,8 @@ export const MorphingMenu: React.FC<Props> = ({
   menuLabel,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isNameToggled, setIsNameToggled] = useState<boolean>(false);
+  const [isNameHovered, setIsNameHovered] = useState<boolean>(false);
 
   // Close on Escape key
   useEffect(() => {
@@ -278,11 +280,26 @@ export const MorphingMenu: React.FC<Props> = ({
                   </motion.div>
                 </nav>
 
-                {/* Bottom Row: [ jason ]               instagram   github */}
+                {/* Bottom Row: [ jason ] / [ steward jason liuwindra ]        instagram   github */}
                 <motion.div variants={itemVariants} className="flex items-center justify-between text-xs sm:text-[13px] pt-2">
-                  <span className="font-mono-code text-white text-xs sm:text-[13px] tracking-tight font-normal">
-                    [ jason ]
-                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      uiSfx.playClick();
+                      setIsNameToggled((prev) => !prev);
+                    }}
+                    onMouseEnter={() => {
+                      setIsNameHovered(true);
+                      uiSfx.playHover();
+                    }}
+                    onMouseLeave={() => setIsNameHovered(false)}
+                    className="font-mono-code text-white text-xs sm:text-[13px] tracking-tight font-normal select-none cursor-pointer hover:text-zinc-300 transition-colors"
+                    aria-label={`Toggle brand name: ${(isNameToggled || isNameHovered) ? 'steward jason liuwindra' : 'jason'}`}
+                    title="hover atau tekan untuk melihat nama"
+                  >
+                    [ {(isNameToggled || isNameHovered) ? 'steward jason liuwindra' : 'jason'} ]
+                  </button>
 
                   <div className="flex items-center gap-3.5 sm:gap-4 text-zinc-400 font-normal text-xs sm:text-[13px]">
                     <a

@@ -23,6 +23,8 @@ import { CurtainBlindsTransition, BlindsTransitionStage } from './components/Cur
 import { BottomScrollProgress } from './components/BottomScrollProgress';
 import { InteractiveBrandName } from './components/InteractiveBrandName';
 import { EncryptedPrinciple } from './components/EncryptedPrinciple';
+import { AppleHelloIntro } from './components/AppleHelloIntro';
+import { LiveClock } from './components/LiveClock';
 import { ambientSound, setupGlobalUISFX, uiSfx } from './utils/audio';
 import { Language, Project } from './types';
 
@@ -102,7 +104,6 @@ function parseLocationFromUrl(currentLang: Language = 'en'): { page: PageType; p
 
 export default function App() {
   const [lang, setLang] = useState<Language>(() => getInitialLang());
-  const [timeStr, setTimeStr] = useState<string>('');
   const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
   const [expandedThought, setExpandedThought] = useState<string>('01');
   const [expandedService, setExpandedService] = useState<string>('01');
@@ -113,6 +114,7 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<Project | null>(() => parseLocationFromUrl(getInitialLang()).project);
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const [showIntro, setShowIntro] = useState<boolean>(true);
 
   // Blinds Curtain Transition State
   const [blindsStage, setBlindsStage] = useState<BlindsTransitionStage>('idle');
@@ -293,20 +295,6 @@ export default function App() {
       cancelAnimationFrame(reqId);
       lenis.destroy();
     };
-  }, []);
-
-  // Real-time Clock in HH:mm:ss format
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const seconds = String(now.getSeconds()).padStart(2, '0');
-      setTimeStr(`${hours}:${minutes}:${seconds}`);
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
   }, []);
 
   const [footerProgress, setFooterProgress] = useState(0);
@@ -499,7 +487,7 @@ export default function App() {
           <div className="w-64 sm:w-80 md:w-96 mx-auto px-0 flex justify-between items-center text-xs sm:text-[13px] text-zinc-400 font-mono-code mb-8 sm:mb-12">
             {/* Left: Real-time Clock */}
             <div className="flex items-center gap-2">
-              <span className="text-zinc-500 font-mono-code">{timeStr || '15:44:46'}</span>
+              <LiveClock />
             </div>
 
             {/* Right: lend an ear (Ambient sound toggle) */}
@@ -1119,6 +1107,13 @@ export default function App() {
         onClosed={handleBlindsClosed}
         onOpened={handleBlindsOpened}
       />
+
+      {/* ------------------------------------------------------------- */}
+      {/* APPLE HELLO INTRO OVERLAY */}
+      {/* ------------------------------------------------------------- */}
+      {showIntro && (
+        <AppleHelloIntro onComplete={() => setShowIntro(false)} />
+      )}
     </div>
   );
 }

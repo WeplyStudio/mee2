@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { uiSfx } from '../utils/audio';
 
@@ -15,17 +15,36 @@ export const InteractiveBrandName: React.FC<InteractiveBrandNameProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const [isToggled, setIsToggled] = useState<boolean>(false);
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState<boolean>(false);
 
-  // Expanded on desktop hover OR on touch/click toggle for mobile accessibility
-  const isExpanded = isHovered || isToggled;
+  useEffect(() => {
+    const checkDevice = () => {
+      if (typeof window === 'undefined') return;
+      const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+      const hasTouch = 'ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+      const isNarrow = window.innerWidth <= 1024;
+      const noHover = !window.matchMedia('(hover: hover)').matches;
+      setIsMobileOrTablet(Boolean(isCoarse || hasTouch || isNarrow || noHover));
+    };
+
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    return () => window.removeEventListener('resize', checkDevice);
+  }, []);
+
+  // On mobile or tablet, state is toggled on press (tap to expand, tap again to collapse)
+  // On desktop, state changes purely on cursor hover (no click needed)
+  const isExpanded = isMobileOrTablet ? isToggled : isHovered;
   const currentText = isExpanded ? fullName : shortName;
 
   const handleMouseEnter = () => {
+    if (isMobileOrTablet) return;
     setIsHovered(true);
     uiSfx.playHover();
   };
 
   const handleMouseLeave = () => {
+    if (isMobileOrTablet) return;
     setIsHovered(false);
   };
 
@@ -33,7 +52,9 @@ export const InteractiveBrandName: React.FC<InteractiveBrandNameProps> = ({
     e.preventDefault();
     e.stopPropagation();
     uiSfx.playClick();
-    setIsToggled((prev) => !prev);
+    if (isMobileOrTablet) {
+      setIsToggled((prev) => !prev);
+    }
   };
 
   return (
@@ -47,7 +68,7 @@ export const InteractiveBrandName: React.FC<InteractiveBrandNameProps> = ({
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className="group relative inline-flex items-center justify-center font-sans tracking-tight text-2xl sm:text-4xl md:text-5xl select-none cursor-pointer focus:outline-hidden py-1 px-3 rounded-xl h-[56px] sm:h-[68px] md:h-[76px]"
+        className="group relative inline-flex items-center justify-center font-sans tracking-tight text-lg min-[380px]:text-xl sm:text-3xl md:text-5xl select-none cursor-pointer focus:outline-hidden py-1 px-2.5 sm:px-3 rounded-xl h-[52px] sm:h-[68px] md:h-[76px] max-w-full"
         whileTap={{ scale: 0.97 }}
         whileHover={{ scale: 1.01 }}
         transition={{
@@ -55,7 +76,7 @@ export const InteractiveBrandName: React.FC<InteractiveBrandNameProps> = ({
         }}
         style={{ overflowAnchor: 'none' }}
         aria-label={`Interactive name: ${currentText}`}
-        title="hover to view full name"
+        title={isMobileOrTablet ? 'tekan untuk beralih nama' : 'arahkan kursor untuk melihat nama lengkap'}
       >
         {/* Opening bracket */}
         <motion.span
