@@ -6,6 +6,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Lenis from 'lenis';
 import { Volume2, VolumeX, ArrowUpRight } from 'lucide-react';
+import { AnimatedSoundWave } from './components/AnimatedIcons';
 import { getProjectsData, getPrinciplesList, getPhilosophyData, getServicesData, getStatsData, getFaqData, TRANSLATIONS } from './data/portfolioData';
 import { ProjectMockup } from './components/ProjectMockup';
 import { ContactModal } from './components/ContactModal';
@@ -297,37 +298,6 @@ export default function App() {
     };
   }, []);
 
-  const [footerProgress, setFooterProgress] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
-      const clientHeight = document.documentElement.clientHeight || window.innerHeight || 0;
-      const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
-
-      const totalScrollable = scrollHeight - clientHeight;
-      if (totalScrollable <= 0 || Number.isNaN(totalScrollable)) {
-        setFooterProgress(0);
-        return;
-      }
-
-      const threshold = 600; // Track over the last 600px of scrolling
-      const activeArea = totalScrollable - scrollTop;
-
-      if (activeArea < threshold) {
-        const p = 1 - activeArea / threshold;
-        const clamped = Number.isNaN(p) ? 0 : Math.max(0, Math.min(1, p));
-        setFooterProgress(clamped);
-      } else {
-        setFooterProgress(0);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   const toggleSound = () => {
     const active = ambientSound.toggle();
     setIsAudioPlaying(active);
@@ -473,15 +443,15 @@ export default function App() {
       </header>
 
       {/* ------------------------------------------------------------- */}
-      {/* MAIN CONTENT LAYER (SLIDES UP OVER THE STICKY FOOTER) */}
+      {/* MAIN CONTENT LAYER */}
       {/* ------------------------------------------------------------- */}
-      <div className="relative z-10 bg-[#fafaf9] shadow-xs pb-16 min-h-[calc(100vh-80px)]">
+      <div className="relative z-10 bg-[#fafaf9] pb-16">
         {currentPage === 'home' ? (
           <>
             {/* ------------------------------------------------------------- */}
             {/* HERO SECTION */}
             {/* ------------------------------------------------------------- */}
-            <section id="hero" className="relative pt-24 sm:pt-28 pb-8 overflow-hidden my-12">
+            <section id="hero" className="relative pt-24 sm:pt-28 pb-8 overflow-hidden mb-12">
         {/* Hero Top Metadata Row (Aligned with center photo width) */}
         <ScrollReveal delay={100} distance={20}>
           <div className="w-64 sm:w-80 md:w-96 mx-auto px-0 flex justify-between items-center text-xs sm:text-[13px] text-zinc-400 font-mono-code mb-8 sm:mb-12">
@@ -495,9 +465,8 @@ export default function App() {
               onClick={toggleSound}
               className="group flex items-center gap-2 text-zinc-400 hover:text-zinc-900 transition-colors cursor-pointer"
             >
-              <span className={`w-1.5 h-1.5 rounded-full border border-zinc-400 group-hover:border-zinc-900 ${isAudioPlaying ? 'bg-emerald-500 border-emerald-500 animate-ping' : ''}`}></span>
+              <AnimatedSoundWave isPlaying={isAudioPlaying} size={13} />
               <span>{t.lendAnEar}</span>
-              {isAudioPlaying ? <Volume2 size={13} className="text-emerald-600 animate-pulse" /> : <VolumeX size={13} className="opacity-60" />}
             </button>
           </div>
         </ScrollReveal>
@@ -1045,10 +1014,9 @@ export default function App() {
 </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* UNIFIED STICKY ANIMATED FOOTER (REVEALED FROM UNDERNEATH) */}
+      {/* UNIFIED FOOTER */}
       {/* ------------------------------------------------------------- */}
       <Footer
-        footerProgress={footerProgress}
         lang={lang}
         onNavigateHome={() => {
           navigateTo('home');

@@ -1,6 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { X, Send, Copy, Check, Mail, ArrowUpRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import {
+  AnimatedMail,
+  AnimatedSend,
+  AnimatedCopy,
+  AnimatedClose,
+  AnimatedArrowUpRight,
+} from './AnimatedIcons';
 
 import { Language } from '../types';
 import { sendTelegramNotification } from '../utils/telegram';
@@ -188,7 +194,7 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
           className="absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-black flex items-center justify-center transition-colors cursor-pointer"
           aria-label="Close modal"
         >
-          <X size={16} />
+          <AnimatedClose size={15} />
         </button>
 
         <div className="space-y-1 mb-6">
@@ -201,7 +207,7 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
         <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-3.5 flex items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="w-8 h-8 rounded-lg bg-zinc-200/80 flex items-center justify-center shrink-0">
-              <Mail size={16} className="text-zinc-700" />
+              <AnimatedMail size={16} className="text-zinc-700" />
             </div>
             <div className="truncate">
               <div className="text-[10px] text-zinc-400 uppercase font-mono-code tracking-wider">{current.directEmail}</div>
@@ -212,7 +218,7 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
             onClick={handleCopy}
             className="shrink-0 px-3 py-1.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-800 text-xs font-medium border border-zinc-200 flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
           >
-            {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+            <AnimatedCopy isCopied={copied} size={14} />
             <span>{copied ? current.copied : current.copy}</span>
           </button>
         </div>
@@ -283,17 +289,17 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
                   href="https://instagram.com/jasonn.doc" 
                   target="_blank" 
                   rel="noreferrer"
-                  className="hover:text-black flex items-center gap-0.5"
+                  className="hover:text-black flex items-center gap-1 group"
                 >
-                  Instagram <ArrowUpRight size={11} />
+                  Instagram <AnimatedArrowUpRight size={12} />
                 </a>
                 <a 
                   href="https://github.com" 
                   target="_blank" 
                   rel="noreferrer"
-                  className="hover:text-black flex items-center gap-0.5"
+                  className="hover:text-black flex items-center gap-1 group"
                 >
-                  GitHub <ArrowUpRight size={11} />
+                  GitHub <AnimatedArrowUpRight size={12} />
                 </a>
               </div>
 
@@ -307,14 +313,14 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
                 <button
                   type="submit"
                   disabled={!isFormValid || isSubmitting}
-                  className={`px-5 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all duration-200 ${
+                  className={`px-5 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all duration-200 group ${
                     isFormValid && !isSubmitting
                       ? 'bg-black hover:bg-zinc-800 text-white cursor-pointer active:scale-95 shadow-md'
                       : 'bg-zinc-200 text-zinc-400 cursor-not-allowed select-none'
                   }`}
                 >
                   <span>{isSubmitting ? 'Mengirim...' : current.sendMessage}</span>
-                  <Send size={13} />
+                  <AnimatedSend size={13} />
                 </button>
               </div>
             </div>

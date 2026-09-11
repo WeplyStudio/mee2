@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowUpRight, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { ScrollReveal } from './ScrollReveal';
+import { AnimatedArrowUpRight } from './AnimatedIcons';
 import { TRANSLATIONS } from '../data/portfolioData';
 import { Language } from '../types';
 
@@ -16,7 +17,6 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({
-  footerProgress = 1,
   lang,
   onNavigateHome,
   onNavigateAboutMe,
@@ -29,32 +29,20 @@ export const Footer: React.FC<FooterProps> = ({
   const [hoveredLetter, setHoveredLetter] = useState<number | null>(null);
 
   const logoLetters = ['[', 'j', 'a', 'y', 's', ']'];
-  const safeProgress = typeof footerProgress === 'number' && !Number.isNaN(footerProgress) ? footerProgress : 1;
 
   return (
     <footer
       id="contact"
-      className="sticky bottom-0 z-0 pt-20 pb-12 px-6 sm:px-12 bg-[#fdfdfd] border-t border-zinc-200/80 min-h-[450px] overflow-hidden"
-      style={{
-        transform: `translateY(${-110 * (1 - safeProgress)}px)`,
-        transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-        willChange: 'transform',
-      }}
+      className="relative z-10 pt-16 sm:pt-20 pb-12 px-6 sm:px-12 bg-[#fdfdfd] border-t border-zinc-200/80 overflow-hidden"
     >
       <div className="max-w-7xl mx-auto">
         
         {/* Top Grid Columns */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-8 pb-16">
           
-          {/* Column 1: [contact] & get in touch */}
+          {/* Column 1: get in touch */}
           <div className="sm:col-span-6 space-y-3">
             <ScrollReveal delay={100} distance={20}>
-              <div className="text-[11px] font-mono-code text-zinc-400 lowercase tracking-wider">
-                {t.contactLabel}
-              </div>
-            </ScrollReveal>
-            
-            <ScrollReveal delay={180} distance={25}>
               <div className="space-y-1">
                 <button
                   onClick={onOpenContact}
@@ -70,15 +58,9 @@ export const Footer: React.FC<FooterProps> = ({
             </ScrollReveal>
           </div>
 
-          {/* Column 2: [links] */}
+          {/* Column 2: links */}
           <div className="sm:col-span-3 space-y-2 font-mono-code text-xs">
-            <ScrollReveal delay={120} distance={20}>
-              <div className="text-[11px] text-zinc-400 mb-2 lowercase tracking-wider">
-                {t.linksLabel}
-              </div>
-            </ScrollReveal>
-            
-            <ScrollReveal delay={200} distance={25}>
+            <ScrollReveal delay={150} distance={20}>
               <ul className="space-y-1.5 text-zinc-600">
                 <li>
                   <button
@@ -133,15 +115,9 @@ export const Footer: React.FC<FooterProps> = ({
             </ScrollReveal>
           </div>
 
-          {/* Column 3: [connect] */}
+          {/* Column 3: socials */}
           <div className="sm:col-span-3 space-y-2 font-mono-code text-xs">
-            <ScrollReveal delay={140} distance={20}>
-              <div className="text-[11px] text-zinc-400 mb-2 lowercase tracking-wider">
-                {t.connectLabel}
-              </div>
-            </ScrollReveal>
-            
-            <ScrollReveal delay={220} distance={25}>
+            <ScrollReveal delay={180} distance={20}>
               <ul className="space-y-1.5 text-zinc-600">
                 <li>
                   <a
@@ -151,10 +127,7 @@ export const Footer: React.FC<FooterProps> = ({
                     className="group hover:text-black transition-colors flex items-center gap-1.5 lowercase"
                   >
                     <span>{t.instagram}</span>
-                    <ArrowUpRight
-                      size={11}
-                      className="text-zinc-400 group-hover:text-black group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200"
-                    />
+                    <AnimatedArrowUpRight size={12} className="text-zinc-400 group-hover:text-black transition-colors" />
                   </a>
                 </li>
               </ul>

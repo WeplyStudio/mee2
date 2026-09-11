@@ -339,9 +339,8 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
       <ScrollReveal delay={300} distance={15}>
         <div className="pt-16 pb-4 border-t border-zinc-200/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs font-mono-code text-zinc-400">
           
-          {/* Left: [contact] hello@itsjason.my.id */}
+          {/* Left: hello@itsjason.my.id */}
           <div className="flex items-center gap-3">
-            <span className="lowercase">{c.contactTag}</span>
             <a
               href={`mailto:${c.email}`}
               className="text-zinc-800 hover:text-black transition-colors font-sans lowercase font-normal"
@@ -350,9 +349,8 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
             </a>
           </div>
 
-          {/* Right: [connect] instagram, github */}
+          {/* Right: instagram, github */}
           <div className="flex items-center gap-3">
-            <span className="lowercase">{c.connectTag}</span>
             <div className="flex items-center gap-2 text-zinc-800 font-sans font-normal">
               <a
                 href="https://instagram.com/jasonn.doc"

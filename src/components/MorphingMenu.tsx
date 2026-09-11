@@ -2,6 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Language } from '../types';
 import { uiSfx } from '../utils/audio';
+import {
+  AnimatedSoundWave,
+  AnimatedClose,
+  AnimatedFolder,
+  AnimatedUser,
+  AnimatedSparkle,
+  AnimatedEvidence,
+  AnimatedMail,
+  AnimatedArrowUpRight,
+} from './AnimatedIcons';
 
 interface Props {
   isOpen: boolean;
@@ -183,11 +193,7 @@ export const MorphingMenu: React.FC<Props> = ({
                     onMouseEnter={() => uiSfx.playHover()}
                     className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer group lowercase"
                   >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full border border-zinc-400 group-hover:border-white transition-all ${
-                        isAudioPlaying ? 'bg-emerald-400 border-emerald-400 ring-2 ring-emerald-400/30' : ''
-                      }`}
-                    />
+                    <AnimatedSoundWave isPlaying={isAudioPlaying} size={13} />
                     <span className="font-normal tracking-tight text-zinc-400 group-hover:text-zinc-200 text-xs sm:text-[13px]">
                       lend an ear
                     </span>
@@ -201,14 +207,15 @@ export const MorphingMenu: React.FC<Props> = ({
                       setIsOpen(false);
                     }}
                     onMouseEnter={() => uiSfx.playHover()}
-                    className="font-normal text-white hover:text-zinc-300 transition-colors tracking-tight text-xs sm:text-[13px] cursor-pointer lowercase"
+                    className="group flex items-center gap-1.5 font-normal text-white hover:text-zinc-300 transition-colors tracking-tight text-xs sm:text-[13px] cursor-pointer lowercase"
                   >
-                    close
+                    <span>close</span>
+                    <AnimatedClose size={13} className="text-zinc-400 group-hover:text-white" />
                   </button>
                 </motion.div>
 
                 {/* Middle Main Navigation List: portfolio, identity, thought, evidence, leave a thought */}
-                <nav className="flex flex-col space-y-3 sm:space-y-3.5 my-auto pl-0.5">
+                <nav className="flex flex-col space-y-2.5 sm:space-y-3 my-auto pl-0.5">
                   <motion.div variants={itemVariants}>
                     <button
                       type="button"
@@ -217,9 +224,10 @@ export const MorphingMenu: React.FC<Props> = ({
                         handleNav(() => onScrollTo('projects'));
                       }}
                       onMouseEnter={() => uiSfx.playHover()}
-                      className="text-left text-[29px] sm:text-[35px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase block w-full"
+                      className="group flex items-center justify-between text-left text-[29px] sm:text-[34px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase w-full"
                     >
-                      portfolio
+                      <span>portfolio</span>
+                      <AnimatedFolder size={18} className="text-zinc-500 group-hover:text-white transition-colors opacity-70 group-hover:opacity-100" />
                     </button>
                   </motion.div>
 
@@ -231,9 +239,10 @@ export const MorphingMenu: React.FC<Props> = ({
                         handleNav(onOpenStory);
                       }}
                       onMouseEnter={() => uiSfx.playHover()}
-                      className="text-left text-[29px] sm:text-[35px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase block w-full"
+                      className="group flex items-center justify-between text-left text-[29px] sm:text-[34px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase w-full"
                     >
-                      identity
+                      <span>identity</span>
+                      <AnimatedUser size={18} className="text-zinc-500 group-hover:text-white transition-colors opacity-70 group-hover:opacity-100" />
                     </button>
                   </motion.div>
 
@@ -245,9 +254,10 @@ export const MorphingMenu: React.FC<Props> = ({
                         handleNav(() => onScrollTo('thought'));
                       }}
                       onMouseEnter={() => uiSfx.playHover()}
-                      className="text-left text-[29px] sm:text-[35px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase block w-full"
+                      className="group flex items-center justify-between text-left text-[29px] sm:text-[34px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase w-full"
                     >
-                      thought
+                      <span>thought</span>
+                      <AnimatedSparkle size={18} className="text-zinc-500 group-hover:text-white transition-colors opacity-70 group-hover:opacity-100" />
                     </button>
                   </motion.div>
 
@@ -259,9 +269,10 @@ export const MorphingMenu: React.FC<Props> = ({
                         handleNav(() => onScrollTo('stats'));
                       }}
                       onMouseEnter={() => uiSfx.playHover()}
-                      className="text-left text-[29px] sm:text-[35px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase block w-full"
+                      className="group flex items-center justify-between text-left text-[29px] sm:text-[34px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase w-full"
                     >
-                      evidence
+                      <span>evidence</span>
+                      <AnimatedEvidence size={18} className="text-zinc-500 group-hover:text-white transition-colors opacity-70 group-hover:opacity-100" />
                     </button>
                   </motion.div>
 
@@ -273,9 +284,10 @@ export const MorphingMenu: React.FC<Props> = ({
                         handleNav(onOpenContact);
                       }}
                       onMouseEnter={() => uiSfx.playHover()}
-                      className="text-left text-[29px] sm:text-[35px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase block w-full"
+                      className="group flex items-center justify-between text-left text-[29px] sm:text-[34px] font-normal tracking-tight text-zinc-300 hover:text-white transition-all duration-200 hover:translate-x-1 leading-[1.2] cursor-pointer lowercase w-full"
                     >
-                      leave a thought
+                      <span>leave a thought</span>
+                      <AnimatedMail size={18} className="text-zinc-500 group-hover:text-white transition-colors opacity-70 group-hover:opacity-100" />
                     </button>
                   </motion.div>
                 </nav>
@@ -306,27 +318,29 @@ export const MorphingMenu: React.FC<Props> = ({
                       href="https://instagram.com/jasonn.doc"
                       target="_blank"
                       rel="noreferrer"
-                      className="hover:text-white transition-colors lowercase"
+                      className="group flex items-center gap-0.5 hover:text-white transition-colors lowercase"
                       onClick={(e) => {
                         e.stopPropagation();
                         uiSfx.playClick();
                       }}
                       onMouseEnter={() => uiSfx.playHover()}
                     >
-                      instagram
+                      <span>instagram</span>
+                      <AnimatedArrowUpRight size={10} className="opacity-70 group-hover:opacity-100" />
                     </a>
                     <a
                       href="https://github.com"
                       target="_blank"
                       rel="noreferrer"
-                      className="hover:text-white transition-colors lowercase"
+                      className="group flex items-center gap-0.5 hover:text-white transition-colors lowercase"
                       onClick={(e) => {
                         e.stopPropagation();
                         uiSfx.playClick();
                       }}
                       onMouseEnter={() => uiSfx.playHover()}
                     >
-                      github
+                      <span>github</span>
+                      <AnimatedArrowUpRight size={10} className="opacity-70 group-hover:opacity-100" />
                     </a>
                   </div>
                 </motion.div>
