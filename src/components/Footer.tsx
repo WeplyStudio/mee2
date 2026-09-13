@@ -17,6 +17,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({
+  footerProgress = 0,
   lang,
   onNavigateHome,
   onNavigateAboutMe,
@@ -29,20 +30,41 @@ export const Footer: React.FC<FooterProps> = ({
   const [hoveredLetter, setHoveredLetter] = useState<number | null>(null);
 
   const logoLetters = ['[', 'j', 'a', 'y', 's', ']'];
+  const safeProgress = typeof footerProgress === 'number' && !Number.isNaN(footerProgress) ? footerProgress : 0;
+
+  // Dynamic downward reveal animation:
+  // When hidden/about to reveal (safeProgress = 0), footer starts tucked higher up (-70px)
+  // and glides gracefully DOWNWARDS into place (0px) as the curtain lifts up.
+  const translateY = Math.round((safeProgress - 1) * 70);
+  const scale = 0.96 + 0.04 * safeProgress;
+  const opacity = 0.35 + 0.65 * safeProgress;
 
   return (
     <footer
       id="contact"
-      className="relative z-10 pt-16 sm:pt-20 pb-12 px-6 sm:px-12 bg-[#fdfdfd] border-t border-zinc-200/80 overflow-hidden"
+      className="sticky bottom-0 z-0 pt-16 sm:pt-20 pb-12 px-6 sm:px-12 bg-[#fdfdfd] border-t border-zinc-200/80 min-h-[440px] overflow-hidden"
     >
-      <div className="max-w-7xl mx-auto">
+      <div 
+        className="max-w-7xl mx-auto transition-all duration-300 ease-out will-change-transform"
+        style={{
+          transform: `translateY(${translateY}px) scale(${scale})`,
+          opacity: opacity,
+          transformOrigin: 'top center',
+        }}
+      >
         
         {/* Top Grid Columns */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-8 pb-16">
           
-          {/* Column 1: get in touch */}
+          {/* Column 1: [contact] & get in touch */}
           <div className="sm:col-span-6 space-y-3">
-            <ScrollReveal delay={100} distance={20}>
+            <ScrollReveal delay={100} distance={-20}>
+              <div className="text-[11px] font-mono-code text-zinc-400 lowercase tracking-wider">
+                {t.contactLabel}
+              </div>
+            </ScrollReveal>
+            
+            <ScrollReveal delay={180} distance={-25}>
               <div className="space-y-1">
                 <button
                   onClick={onOpenContact}
@@ -58,9 +80,15 @@ export const Footer: React.FC<FooterProps> = ({
             </ScrollReveal>
           </div>
 
-          {/* Column 2: links */}
+          {/* Column 2: [links] */}
           <div className="sm:col-span-3 space-y-2 font-mono-code text-xs">
-            <ScrollReveal delay={150} distance={20}>
+            <ScrollReveal delay={120} distance={-20}>
+              <div className="text-[11px] text-zinc-400 mb-2 lowercase tracking-wider">
+                {t.linksLabel}
+              </div>
+            </ScrollReveal>
+            
+            <ScrollReveal delay={200} distance={-25}>
               <ul className="space-y-1.5 text-zinc-600">
                 <li>
                   <button
@@ -115,9 +143,15 @@ export const Footer: React.FC<FooterProps> = ({
             </ScrollReveal>
           </div>
 
-          {/* Column 3: socials */}
+          {/* Column 3: [connect] */}
           <div className="sm:col-span-3 space-y-2 font-mono-code text-xs">
-            <ScrollReveal delay={180} distance={20}>
+            <ScrollReveal delay={140} distance={-20}>
+              <div className="text-[11px] text-zinc-400 mb-2 lowercase tracking-wider">
+                {t.connectLabel}
+              </div>
+            </ScrollReveal>
+            
+            <ScrollReveal delay={220} distance={-25}>
               <ul className="space-y-1.5 text-zinc-600">
                 <li>
                   <a
@@ -136,7 +170,7 @@ export const Footer: React.FC<FooterProps> = ({
         </div>
 
         {/* Giant [jays] Logo with Interactive Letter Animation & Tracking Reveal */}
-        <ScrollReveal delay={100} distance={35}>
+        <ScrollReveal delay={100} distance={-30}>
           <div className="py-8 border-t border-zinc-200/80 group">
             <div className="flex items-center justify-between text-[18vw] font-black tracking-tighter text-zinc-950 leading-none select-none hover:tracking-normal transition-all duration-700 cursor-default">
               {logoLetters.map((char, index) => (
@@ -160,7 +194,7 @@ export const Footer: React.FC<FooterProps> = ({
         </ScrollReveal>
 
         {/* Bottom Copyright & Location Row */}
-        <ScrollReveal delay={150} distance={15}>
+        <ScrollReveal delay={150} distance={-15}>
           <div className="pt-8 border-t border-zinc-200/80 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-zinc-400 font-mono-code lowercase">
             <span>indonesia</span>
             <span>{t.designedBy}</span>

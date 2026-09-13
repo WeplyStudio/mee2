@@ -19,6 +19,7 @@ import { NotFoundPage } from './components/NotFoundPage';
 import { AnimatedQuote } from './components/AnimatedQuote';
 import { ScrollReveal } from './components/ScrollReveal';
 import { ShutterRevealImage } from './components/ShutterRevealImage';
+import { VisualCurationMarquee } from './components/VisualCurationMarquee';
 import { Footer } from './components/Footer';
 import { CurtainBlindsTransition, BlindsTransitionStage } from './components/CurtainBlindsTransition';
 import { BottomScrollProgress } from './components/BottomScrollProgress';
@@ -298,6 +299,47 @@ export default function App() {
     };
   }, []);
 
+  const [footerProgress, setFooterProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
+      const clientHeight = document.documentElement.clientHeight || window.innerHeight || 0;
+      const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+
+      const totalScrollable = scrollHeight - clientHeight;
+      if (totalScrollable <= 0) {
+        setFooterProgress(1);
+        return;
+      }
+
+      const threshold = 550; // Reveal progress tracks across the last 550px of scroll
+      const remainingScroll = totalScrollable - scrollTop;
+
+      if (remainingScroll < threshold) {
+        const p = 1 - remainingScroll / threshold;
+        setFooterProgress(Math.max(0, Math.min(1, p)));
+      } else {
+        setFooterProgress(0);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
+
+    let unsubLenis: (() => void) | undefined;
+    if (lenisRef.current) {
+      unsubLenis = lenisRef.current.on('scroll', handleScroll);
+    }
+
+    handleScroll();
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+      if (unsubLenis) unsubLenis();
+    };
+  }, [currentPage]);
+
   const toggleSound = () => {
     const active = ambientSound.toggle();
     setIsAudioPlaying(active);
@@ -443,9 +485,9 @@ export default function App() {
       </header>
 
       {/* ------------------------------------------------------------- */}
-      {/* MAIN CONTENT LAYER */}
+      {/* MAIN CONTENT LAYER (SLIDES UP OVER STICKY FOOTER REVEAL) */}
       {/* ------------------------------------------------------------- */}
-      <div className="relative z-10 bg-[#fafaf9] pb-16">
+      <div className="relative z-10 bg-[#fafaf9] pb-16 min-h-screen">
         {currentPage === 'home' ? (
           <>
             {/* ------------------------------------------------------------- */}
@@ -682,6 +724,11 @@ export default function App() {
           </div>
         </div>
       </section>
+
+      {/* ------------------------------------------------------------- */}
+      {/* CURVED PATH MARQUEE (VISUAL CURATION) */}
+      {/* ------------------------------------------------------------- */}
+      <VisualCurationMarquee lang={lang} />
 
       {/* ------------------------------------------------------------- */}
       {/* SERVICES SECTION */}
@@ -1014,9 +1061,10 @@ export default function App() {
 </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* UNIFIED FOOTER */}
+      {/* UNIFIED STICKY ANIMATED FOOTER (REVEALED FROM UNDERNEATH) */}
       {/* ------------------------------------------------------------- */}
       <Footer
+        footerProgress={footerProgress}
         lang={lang}
         onNavigateHome={() => {
           navigateTo('home');
