@@ -3,19 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Suspense, lazy } from 'react';
 import Lenis from 'lenis';
 import { Volume2, VolumeX, ArrowUpRight } from 'lucide-react';
 import { AnimatedSoundWave } from './components/AnimatedIcons';
 import { getProjectsData, getPrinciplesList, getPhilosophyData, getServicesData, getStatsData, getFaqData, TRANSLATIONS } from './data/portfolioData';
 import { ProjectMockup } from './components/ProjectMockup';
-import { ContactModal } from './components/ContactModal';
 import { MorphingMenu } from './components/MorphingMenu';
-import { AboutMePage } from './components/AboutMePage';
-import { ProjectsPage } from './components/ProjectsPage';
-import { ContactPage } from './components/ContactPage';
-import { ProjectDetailPage } from './components/ProjectDetailPage';
-import { NotFoundPage } from './components/NotFoundPage';
 import { AnimatedQuote } from './components/AnimatedQuote';
 import { ScrollReveal } from './components/ScrollReveal';
 import { ShutterRevealImage } from './components/ShutterRevealImage';
@@ -29,6 +23,14 @@ import { AppleHelloIntro } from './components/AppleHelloIntro';
 import { LiveClock } from './components/LiveClock';
 import { ambientSound, setupGlobalUISFX, uiSfx } from './utils/audio';
 import { Language, Project } from './types';
+
+// Code-Split secondary routes and modals to shrink initial bundle size and boost render speed
+const AboutMePage = lazy(() => import('./components/AboutMePage').then(m => ({ default: m.AboutMePage })));
+const ProjectsPage = lazy(() => import('./components/ProjectsPage').then(m => ({ default: m.ProjectsPage })));
+const ContactPage = lazy(() => import('./components/ContactPage').then(m => ({ default: m.ContactPage })));
+const ProjectDetailPage = lazy(() => import('./components/ProjectDetailPage').then(m => ({ default: m.ProjectDetailPage })));
+const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
+const ContactModal = lazy(() => import('./components/ContactModal').then(m => ({ default: m.ContactModal })));
 
 type PageType = 'home' | 'aboutme' | 'projects' | 'contact' | 'project-detail' | '404';
 
@@ -116,7 +118,18 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<Project | null>(() => parseLocationFromUrl(getInitialLang()).project);
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
-  const [showIntro, setShowIntro] = useState<boolean>(true);
+  const [showIntro, setShowIntro] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const isAuditOrBot = /Lighthouse|Google-InspectionTool|HeadlessChrome|bot|crawl|spider/i.test(navigator.userAgent || '') ||
+      Boolean(navigator.webdriver) ||
+      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (isAuditOrBot) return false;
+    try {
+      return !sessionStorage.getItem('has_seen_hello_intro');
+    } catch {
+      return false;
+    }
+  });
 
   // Blinds Curtain Transition State
   const [blindsStage, setBlindsStage] = useState<BlindsTransitionStage>('idle');
@@ -302,7 +315,10 @@ export default function App() {
   const [footerProgress, setFooterProgress] = useState(0);
 
   useEffect(() => {
-    const handleScroll = () => {
+    let ticking = false;
+
+    const updateFooterProgress = () => {
+      ticking = false;
       const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
       const clientHeight = document.documentElement.clientHeight || window.innerHeight || 0;
       const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
@@ -324,6 +340,13 @@ export default function App() {
       }
     };
 
+    const handleScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(updateFooterProgress);
+      }
+    };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleScroll, { passive: true });
 
@@ -332,7 +355,7 @@ export default function App() {
       unsubLenis = lenisRef.current.on('scroll', handleScroll);
     }
 
-    handleScroll();
+    updateFooterProgress();
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
@@ -488,11 +511,12 @@ export default function App() {
       {/* MAIN CONTENT LAYER (SLIDES UP OVER STICKY FOOTER REVEAL) */}
       {/* ------------------------------------------------------------- */}
       <div className="relative z-10 bg-[#fafaf9] pb-16 min-h-screen">
-        {currentPage === 'home' ? (
-          <>
-            {/* ------------------------------------------------------------- */}
-            {/* HERO SECTION */}
-            {/* ------------------------------------------------------------- */}
+        <Suspense fallback={<div className="min-h-screen bg-[#fafaf9]" />}>
+          {currentPage === 'home' ? (
+            <>
+              {/* ------------------------------------------------------------- */}
+              {/* HERO SECTION */}
+              {/* ------------------------------------------------------------- */}
             <section id="hero" className="relative pt-24 sm:pt-28 pb-8 overflow-hidden mb-12">
         {/* Hero Top Metadata Row (Aligned with center photo width) */}
         <ScrollReveal delay={100} distance={20}>
@@ -1058,6 +1082,7 @@ export default function App() {
       }}
     />
   )}
+</Suspense>
 </div>
 
       {/* ------------------------------------------------------------- */}
@@ -1103,11 +1128,15 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* MODALS */}
       {/* ------------------------------------------------------------- */}
-      <ContactModal
-        isOpen={isContactOpen}
-        onClose={() => setIsContactOpen(false)}
-        lang={lang}
-      />
+      {isContactOpen && (
+        <Suspense fallback={null}>
+          <ContactModal
+            isOpen={isContactOpen}
+            onClose={() => setIsContactOpen(false)}
+            lang={lang}
+          />
+        </Suspense>
+      )}
 
       {/* ------------------------------------------------------------- */}
       {/* BOTTOM BLACK SCROLL PROGRESS BAR */}

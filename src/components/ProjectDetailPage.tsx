@@ -303,8 +303,10 @@ export const ProjectDetailPage: React.FC<Props> = ({
 
             <div className="w-full h-full flex items-center justify-center p-2">
               <img 
-                src={project.imageUrl || `/${project.imageType}.png`}
+                src={project.imageUrl || `/${project.imageType}.webp`}
                 alt={project.title}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-auto max-h-[82vh] object-contain rounded-xl"
               />
             </div>

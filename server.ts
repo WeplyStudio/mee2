@@ -1,12 +1,25 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
+import compression from 'compression';
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
+
+// Enable HTTP response compression (gzip / deflate) for faster asset transmission
+app.use(compression());
+
+// High-efficiency long-term cache headers for all static files (images, scripts, styles, fonts)
+app.use((req, res, next) => {
+  if (req.path.match(/\.(js|css|webp|jpeg|jpg|png|svg|woff2?|ttf|eot|ico)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+  next();
+});
 
 // Body parsing middlewares
 app.use(express.json({ limit: '64kb' }));
@@ -227,9 +240,38 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    const indexPath = path.join(distPath, 'index.html');
+    let cachedIndexHtml: string | null = null;
+    try {
+      if (fs.existsSync(indexPath)) {
+        cachedIndexHtml = fs.readFileSync(indexPath, 'utf-8');
+      }
+    } catch {
+      cachedIndexHtml = null;
+    }
+
+    // Aggressive caching for hashed build assets (JS, CSS, images, fonts)
+    app.use(
+      express.static(distPath, {
+        maxAge: '1y',
+        immutable: true,
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('index.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+          } else if (filePath.match(/\.(js|css|webp|jpeg|jpg|png|svg|woff2?|ttf|eot)$/)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          }
+        },
+      })
+    );
     app.get('*', (req: Request, res: Response) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      if (cachedIndexHtml) {
+        res.send(cachedIndexHtml);
+      } else {
+        res.sendFile(indexPath);
+      }
     });
   }
 

@@ -11,7 +11,7 @@ const HELLO_SVG_RAW = `<svg fill="none" height="100%" width="100%" viewBox="0 0 
 
 export const AppleHelloIntro: React.FC<AppleHelloIntroProps> = React.memo(({
   onComplete,
-  autoDismissMs = 5400,
+  autoDismissMs = 3200,
 }) => {
   const [isVisible, setIsVisible] = useState<boolean>(true);
   const containerRef = useRef<HTMLDivElement>(null);

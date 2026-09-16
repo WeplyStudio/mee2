@@ -25,7 +25,7 @@ export const ShutterRevealImage: React.FC<ShutterRevealImageProps> = ({
   className = '',
   imgClassName = 'w-full h-full object-cover',
   delay = 0,
-  duration = 1.1,
+  duration = 0.9,
   fetchPriority,
   loading = 'lazy',
   decoding = 'async',
@@ -33,62 +33,63 @@ export const ShutterRevealImage: React.FC<ShutterRevealImageProps> = ({
   children,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  // Hero / priority images should be visible immediately for zero-lag LCP
+  const [isVisible, setIsVisible] = useState<boolean>(fetchPriority === 'high');
 
   // Normalize delay to milliseconds
   const delayMs = delay < 10 ? delay * 1000 : delay;
   const durationMs = duration < 10 ? duration * 1000 : duration;
 
   useEffect(() => {
+    if (isVisible) return;
     const el = containerRef.current;
-    if (!el) return;
-
-    // Immediate check if element is already in viewport
-    const checkViewport = () => {
-      const rect = el.getBoundingClientRect();
-      const windowHeight = window.innerHeight || document.documentElement.clientHeight;
-      // Trigger if top of element is inside screen (with 40px margin)
-      if (rect.top <= windowHeight - 30 && rect.bottom >= 0) {
-        setIsVisible(true);
-        return true;
-      }
-      return false;
-    };
-
-    if (checkViewport()) {
+    if (!el) {
+      setIsVisible(true);
       return;
     }
 
+    // 1. Immediate viewport check
+    try {
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight || 800;
+      if (rect.top <= vh + 150 && rect.bottom >= -150) {
+        setIsVisible(true);
+        return;
+      }
+    } catch {
+      setIsVisible(true);
+      return;
+    }
+
+    // 2. IntersectionObserver with generous rootMargin
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
+        for (const entry of entries) {
           if (entry.isIntersecting || entry.intersectionRatio > 0) {
             setIsVisible(true);
-            observer.unobserve(entry.target);
+            observer.disconnect();
+            break;
           }
-        });
+        }
       },
       {
-        threshold: [0, 0.05, 0.15],
-        rootMargin: '0px 0px -20px 0px',
+        threshold: 0,
+        rootMargin: '200px 0px 200px 0px',
       }
     );
 
     observer.observe(el);
 
-    // Fallback scroll listener in case smooth-scroll (Lenis) delays IntersectionObserver events
-    const onScroll = () => {
-      if (checkViewport()) {
-        window.removeEventListener('scroll', onScroll);
-      }
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
+    // 3. Failsafe: Never keep an image hidden for more than 350ms
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+    }, 350);
 
     return () => {
       observer.disconnect();
-      window.removeEventListener('scroll', onScroll);
+      clearTimeout(timer);
     };
-  }, []);
+  }, [isVisible]);
 
   return (
     <div
@@ -96,9 +97,9 @@ export const ShutterRevealImage: React.FC<ShutterRevealImageProps> = ({
       onClick={onClick}
       className={`relative overflow-hidden ${className}`}
       style={{
-        clipPath: isVisible ? 'inset(0% 0% 0% 0%)' : 'inset(100% 0% 0% 0%)',
-        WebkitClipPath: isVisible ? 'inset(0% 0% 0% 0%)' : 'inset(100% 0% 0% 0%)',
-        opacity: isVisible ? 1 : 0.2,
+        clipPath: isVisible ? 'none' : 'inset(35% 0% 35% 0%)',
+        WebkitClipPath: isVisible ? 'none' : 'inset(35% 0% 35% 0%)',
+        opacity: isVisible ? 1 : 0.7,
         transitionProperty: 'clip-path, -webkit-clip-path, opacity',
         transitionDuration: `${durationMs}ms`,
         transitionTimingFunction: 'cubic-bezier(0.76, 0, 0.24, 1)',
@@ -113,7 +114,7 @@ export const ShutterRevealImage: React.FC<ShutterRevealImageProps> = ({
         decoding={decoding}
         fetchPriority={fetchPriority}
         style={{
-          transform: isVisible ? 'translateY(0) scale(1)' : 'translateY(6%) scale(1.08)',
+          transform: isVisible ? 'translateY(0) scale(1)' : 'translateY(4%) scale(1.05)',
           transitionProperty: 'transform',
           transitionDuration: `${durationMs * 1.15}ms`,
           transitionTimingFunction: 'cubic-bezier(0.76, 0, 0.24, 1)',
@@ -139,7 +140,7 @@ export const ShutterReveal: React.FC<ShutterRevealProps> = ({
   children,
   className = '',
   delay = 0,
-  duration = 1.1,
+  duration = 0.9,
   onClick,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -150,49 +151,51 @@ export const ShutterReveal: React.FC<ShutterRevealProps> = ({
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
-
-    const checkViewport = () => {
-      const rect = el.getBoundingClientRect();
-      const windowHeight = window.innerHeight || document.documentElement.clientHeight;
-      if (rect.top <= windowHeight - 30 && rect.bottom >= 0) {
-        setIsVisible(true);
-        return true;
-      }
-      return false;
-    };
-
-    if (checkViewport()) {
+    if (!el) {
+      setIsVisible(true);
       return;
     }
 
+    // 1. Immediate viewport check
+    try {
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight || 800;
+      if (rect.top <= vh + 150 && rect.bottom >= -150) {
+        setIsVisible(true);
+        return;
+      }
+    } catch {
+      setIsVisible(true);
+      return;
+    }
+
+    // 2. IntersectionObserver
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
+        for (const entry of entries) {
           if (entry.isIntersecting || entry.intersectionRatio > 0) {
             setIsVisible(true);
-            observer.unobserve(entry.target);
+            observer.disconnect();
+            break;
           }
-        });
+        }
       },
       {
-        threshold: [0, 0.05, 0.15],
-        rootMargin: '0px 0px -20px 0px',
+        threshold: 0,
+        rootMargin: '200px 0px 200px 0px',
       }
     );
 
     observer.observe(el);
 
-    const onScroll = () => {
-      if (checkViewport()) {
-        window.removeEventListener('scroll', onScroll);
-      }
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
+    // 3. Failsafe timer
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+    }, 350);
 
     return () => {
       observer.disconnect();
-      window.removeEventListener('scroll', onScroll);
+      clearTimeout(timer);
     };
   }, []);
 
@@ -202,9 +205,9 @@ export const ShutterReveal: React.FC<ShutterRevealProps> = ({
       onClick={onClick}
       className={`relative overflow-hidden ${className}`}
       style={{
-        clipPath: isVisible ? 'inset(0% 0% 0% 0%)' : 'inset(100% 0% 0% 0%)',
-        WebkitClipPath: isVisible ? 'inset(0% 0% 0% 0%)' : 'inset(100% 0% 0% 0%)',
-        opacity: isVisible ? 1 : 0.2,
+        clipPath: isVisible ? 'none' : 'inset(35% 0% 35% 0%)',
+        WebkitClipPath: isVisible ? 'none' : 'inset(35% 0% 35% 0%)',
+        opacity: isVisible ? 1 : 0.7,
         transitionProperty: 'clip-path, -webkit-clip-path, opacity',
         transitionDuration: `${durationMs}ms`,
         transitionTimingFunction: 'cubic-bezier(0.76, 0, 0.24, 1)',

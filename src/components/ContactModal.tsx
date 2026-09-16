@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import confetti from 'canvas-confetti';
 import {
   AnimatedMail,
   AnimatedSend,
@@ -77,13 +76,16 @@ export const ContactModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
 
       if (result.success) {
         setSent(true);
-        try {
-          confetti({
-            particleCount: 80,
-            spread: 60,
-            origin: { y: 0.6 }
-          });
-        } catch { }
+        import('canvas-confetti')
+          .then((module) => {
+            const confetti = module.default;
+            confetti({
+              particleCount: 80,
+              spread: 60,
+              origin: { y: 0.6 },
+            });
+          })
+          .catch(() => {});
       } else {
         setErrorMessage(result.error || 'Gagal mengirim pesan. Silakan coba kembali.');
       }

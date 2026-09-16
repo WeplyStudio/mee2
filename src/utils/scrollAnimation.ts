@@ -9,10 +9,13 @@ export function useScrollProgress() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const handleScroll = () => {
+    let ticking = false;
+
+    const calculateProgress = () => {
+      ticking = false;
       if (!ref.current) return;
       const rect = ref.current.getBoundingClientRect();
-      const windowHeight = window.innerHeight || document.documentElement.clientHeight || 800;
+      const windowHeight = window.innerHeight || 800;
 
       // Calculate relative position: 0 when element enters from bottom, 1 when element reaches middle-top
       const start = windowHeight * 0.95;
@@ -29,6 +32,13 @@ export function useScrollProgress() {
       const clamped = Number.isNaN(rawProgress) ? 0 : Math.max(0, Math.min(1, rawProgress));
 
       setProgress(clamped);
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(calculateProgress);
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });

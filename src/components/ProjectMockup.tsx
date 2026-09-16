@@ -16,26 +16,32 @@ const PROJECT_IMAGE_MAP: Record<string, string> = {
 
 export const ProjectMockup: React.FC<Props> = ({ type, className = '', variant = 'card', imageUrl }) => {
   const [loaded, setLoaded] = useState(false);
+  const imgRef = React.useRef<HTMLImageElement>(null);
   const projectImg = imageUrl || PROJECT_IMAGE_MAP[type];
+
+  React.useEffect(() => {
+    if (imgRef.current?.complete) {
+      setLoaded(true);
+    }
+  }, [projectImg]);
 
   if (projectImg) {
     return (
-      <ShutterReveal className={`w-full h-full relative overflow-hidden bg-zinc-200 dark:bg-zinc-800 ${className}`}>
+      <div className={`w-full h-full relative overflow-hidden bg-zinc-100 ${className}`}>
         {/* Skeleton pulse until loaded */}
         {!loaded && (
-          <div className="absolute inset-0 bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+          <div className="absolute inset-0 bg-zinc-200 animate-pulse pointer-events-none z-10" />
         )}
         <img 
+          ref={imgRef}
           src={projectImg} 
           alt={`${type} preview`}
           loading="lazy"
           decoding="async"
           onLoad={() => setLoaded(true)}
-          className={`w-full h-full object-cover object-top transition-all duration-500 ease-out group-hover:scale-[1.03] ${
-            loaded ? 'opacity-100' : 'opacity-0'
-          }`} 
+          className="w-full h-full object-cover object-top transition-all duration-500 ease-out group-hover:scale-[1.03]" 
         />
-      </ShutterReveal>
+      </div>
     );
   }
 

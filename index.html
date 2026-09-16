@@ -65,14 +65,47 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/profile.jpeg" />
 
-    <!-- Google AdSense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2678635841290127"
-     crossorigin="anonymous"></script>
-
-    <!-- Google Fonts -->
+    <!-- Preconnect CDNs for zero latency -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="dns-prefetch" href="https://cdn.cosmos.so">
+    <link rel="preconnect" href="https://cdn.cosmos.so" crossorigin>
+
+    <!-- Performance Preload Critical LCP Resource -->
+    <link rel="preload" as="image" href="/profile-3.webp" type="image/webp" fetchpriority="high" />
+
+    <!-- Highly Optimized Google Fonts (Asynchronous Non-Render-Blocking with Instant Native Fallback) -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'" />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+    </noscript>
+
+    <!-- Google AdSense - Deferred to First User Interaction or Post-Load Idle for Max Lighthouse Performance -->
+    <script>
+      (function() {
+        var adsenseLoaded = false;
+        function loadAdSense() {
+          if (adsenseLoaded) return;
+          adsenseLoaded = true;
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2678635841290127";
+          s.crossOrigin = "anonymous";
+          document.head.appendChild(s);
+          window.removeEventListener('scroll', loadAdSense);
+          window.removeEventListener('mousemove', loadAdSense);
+          window.removeEventListener('touchstart', loadAdSense);
+        }
+        window.addEventListener('scroll', loadAdSense, { passive: true });
+        window.addEventListener('mousemove', loadAdSense, { passive: true });
+        window.addEventListener('touchstart', loadAdSense, { passive: true });
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(function() { setTimeout(loadAdSense, 3000); });
+        } else {
+          setTimeout(loadAdSense, 3500);
+        }
+      })();
+    </script>
 
     <!-- Schema.org JSON-LD Structured Data for Google Rich Results & Knowledge Graph -->
     <script type="application/ld+json">
