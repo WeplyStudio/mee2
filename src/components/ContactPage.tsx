@@ -180,7 +180,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafaf9] text-zinc-800 pt-24 sm:pt-28 pb-12 px-6 sm:px-12 md:px-16 max-w-7xl mx-auto flex flex-col justify-between selection:bg-zinc-200">
+    <div className="min-h-screen bg-white text-zinc-800 pt-24 sm:pt-28 pb-12 px-6 sm:px-12 md:px-16 max-w-7xl mx-auto flex flex-col justify-between selection:bg-zinc-200">
       
       {/* Top Center Tag */}
       <div className="text-center pt-2 pb-12">
@@ -337,7 +337,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
 
       {/* Bottom Footer Section */}
       <ScrollReveal delay={300} distance={15}>
-        <div className="pt-16 pb-4 border-t border-zinc-200/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs font-mono-code text-zinc-400">
+        <div className="pt-16 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs font-mono-code text-zinc-400">
           
           {/* Left: hello@itsjason.my.id */}
           <div className="flex items-center gap-3">

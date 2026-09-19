@@ -91,7 +91,7 @@ export const ProjectDetailPage: React.FC<Props> = ({
   const nextProject = allProjects.find((p) => p.id === project.nextProjectId) || allProjects[0];
 
   return (
-    <div className="min-h-screen bg-[#fbfbfb] text-zinc-900 font-sans selection:bg-zinc-900 selection:text-white pt-24 sm:pt-32">
+    <div className="min-h-screen bg-white text-zinc-900 font-sans selection:bg-zinc-900 selection:text-white pt-24 sm:pt-32">
       <main className="max-w-5xl mx-auto px-6 sm:px-12 space-y-16 sm:space-y-24 pb-20">
         {/* ------------------------------------------------------------- */}
         {/* HERO: Project Title & Summary */}
@@ -111,7 +111,7 @@ export const ProjectDetailPage: React.FC<Props> = ({
 
           {/* 4 Metadata Columns matching screenshot */}
           <ScrollReveal delay={150} distance={20}>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-8 sm:pt-10 border-t border-zinc-200/80">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-8 sm:pt-10">
               <div className="space-y-1">
                 <div className="text-[11px] font-mono-code text-zinc-400 lowercase">
                   {l.company}
@@ -154,7 +154,7 @@ export const ProjectDetailPage: React.FC<Props> = ({
         {/* ------------------------------------------------------------- */}
         {/* NARRATIVE SECTIONS: Problem, Decisions, Impact */}
         {/* ------------------------------------------------------------- */}
-        <section className="space-y-12 sm:space-y-16 border-t border-zinc-200/80 pt-12 sm:pt-16">
+        <section className="space-y-12 sm:space-y-16 pt-12 sm:pt-16">
           {/* [problem] */}
           <ScrollReveal delay={100} distance={20}>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-16 items-start">
@@ -195,7 +195,7 @@ export const ProjectDetailPage: React.FC<Props> = ({
         {/* ------------------------------------------------------------- */}
         {/* ACHIEVEMENTS / IMPACT METRICS */}
         {/* ------------------------------------------------------------- */}
-        <section className="border-t border-zinc-200/80 pt-12 sm:pt-16">
+        <section className="pt-12 sm:pt-16">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
             <div className="md:col-span-3">
               <ScrollReveal delay={100} distance={20}>
@@ -230,7 +230,7 @@ export const ProjectDetailPage: React.FC<Props> = ({
         {/* ------------------------------------------------------------- */}
         {/* VISUAL SHOWCASE */}
         {/* ------------------------------------------------------------- */}
-        <section className="border-t border-zinc-200/80 pt-12 sm:pt-16">
+        <section className="pt-12 sm:pt-16">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
             <div className="md:col-span-3">
               <ScrollReveal delay={100} distance={20}>
@@ -260,7 +260,7 @@ export const ProjectDetailPage: React.FC<Props> = ({
         {/* ------------------------------------------------------------- */}
         {/* BOTTOM NAVIGATION: Back to works & Next Project */}
         {/* ------------------------------------------------------------- */}
-        <section className="pt-12 sm:pt-16 border-t border-zinc-200/80 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <section className="pt-12 sm:pt-16 flex flex-col sm:flex-row items-center justify-between gap-6">
           <button
             onClick={onBack}
             className="group flex items-center gap-2 text-xs sm:text-[13px] font-mono-code text-zinc-600 hover:text-black transition-colors cursor-pointer"

@@ -19,7 +19,6 @@ import { CurtainBlindsTransition, BlindsTransitionStage } from './components/Cur
 import { BottomScrollProgress } from './components/BottomScrollProgress';
 import { InteractiveBrandName } from './components/InteractiveBrandName';
 import { EncryptedPrinciple } from './components/EncryptedPrinciple';
-import { AppleHelloIntro } from './components/AppleHelloIntro';
 import { LiveClock } from './components/LiveClock';
 import { ambientSound, setupGlobalUISFX, uiSfx } from './utils/audio';
 import { Language, Project } from './types';
@@ -118,18 +117,6 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<Project | null>(() => parseLocationFromUrl(getInitialLang()).project);
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
-  const [showIntro, setShowIntro] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    const isAuditOrBot = /Lighthouse|Google-InspectionTool|HeadlessChrome|bot|crawl|spider/i.test(navigator.userAgent || '') ||
-      Boolean(navigator.webdriver) ||
-      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    if (isAuditOrBot) return false;
-    try {
-      return !sessionStorage.getItem('has_seen_hello_intro');
-    } catch {
-      return false;
-    }
-  });
 
   // Blinds Curtain Transition State
   const [blindsStage, setBlindsStage] = useState<BlindsTransitionStage>('idle');
@@ -446,7 +433,7 @@ export default function App() {
   const localizedActiveProject = activeProject ? (currentProjects.find((p) => p.id === activeProject.id) || activeProject) : null;
 
   return (
-    <div className="min-h-screen bg-[#fafaf9] text-[#121212] font-sans selection:bg-black selection:text-white relative">
+    <div className="min-h-screen bg-white text-[#121212] font-sans selection:bg-black selection:text-white relative">
       {/* ------------------------------------------------------------- */}
       {/* TOP FLOATING / STICKY HEADER */}
       {/* ------------------------------------------------------------- */}
@@ -510,8 +497,8 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* MAIN CONTENT LAYER (SLIDES UP OVER STICKY FOOTER REVEAL) */}
       {/* ------------------------------------------------------------- */}
-      <div className="relative z-10 bg-[#fafaf9] pb-16 min-h-screen">
-        <Suspense fallback={<div className="min-h-screen bg-[#fafaf9]" />}>
+      <div className="relative z-10 bg-white pb-16 min-h-screen">
+        <Suspense fallback={<div className="min-h-screen bg-white" />}>
           {currentPage === 'home' ? (
             <>
               {/* ------------------------------------------------------------- */}
@@ -620,18 +607,16 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* PROJECTS SHOWCASE SECTION (3 CORE PROJECTS) */}
       {/* ------------------------------------------------------------- */}
-      <section id="projects" className="py-12 border-t border-zinc-200/80 mt-32 sm:mt-48 md:mt-60 mb-12">
+      <section id="projects" className="py-12 mt-32 sm:mt-48 md:mt-60 mb-12">
         <div className="w-full">
-          <div className="grid grid-cols-1 md:grid-cols-3 border-b border-zinc-200">
+          <div className="grid grid-cols-1 md:grid-cols-3">
             {currentProjects.map((project, idx) => (
               <ScrollReveal key={project.id} delay={idx * 100} distance={30} className="h-full">
                 <div
                   onClick={() => {
                     navigateTo('project-detail', undefined, { project });
                   }}
-                  className={`group cursor-pointer flex flex-col justify-between h-full ${
-                    idx < 2 ? 'md:border-r border-zinc-200' : ''
-                  } border-b md:border-b-0 border-zinc-200 hover:bg-zinc-100/50 transition-colors`}
+                  className="group cursor-pointer flex flex-col justify-between h-full hover:bg-zinc-100/50 transition-colors"
                 >
                   <div className="w-full aspect-[4/3] relative overflow-hidden bg-zinc-100">
                     <ProjectMockup type={project.imageType} imageUrl={project.imageUrl} />
@@ -679,7 +664,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* THOUGHT SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="thought" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60 my-12">
+      <section id="thought" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto my-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
           <div className="md:col-span-4">
             <ScrollReveal delay={100} distance={20}>
@@ -696,7 +681,7 @@ export default function App() {
               </p>
             </ScrollReveal>
 
-            <div className="space-y-4 pt-4 border-t border-zinc-200/60">
+            <div className="space-y-4 pt-4">
               {currentPhilosophy.map((item, idx) => {
                 const isExpanded = expandedThought === item.number;
                 return (
@@ -757,7 +742,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* SERVICES SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="services" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60 my-12">
+      <section id="services" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto my-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
           <div className="md:col-span-4 space-y-3">
             <ScrollReveal delay={100} distance={20}>
@@ -774,7 +759,7 @@ export default function App() {
               </p>
             </ScrollReveal>
 
-            <div className="space-y-4 pt-4 border-t border-zinc-200/60">
+            <div className="space-y-4 pt-4">
               {currentServices.map((service, idx) => {
                 const isExpanded = expandedService === service.number;
                 return (
@@ -859,7 +844,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* STATS & IMPACT IN NUMBERS SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="stats" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60 my-12">
+      <section id="stats" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto my-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
           <div className="md:col-span-4 space-y-3">
             <ScrollReveal delay={100} distance={20}>
@@ -904,7 +889,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* FAQ SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="faq" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto border-t border-zinc-200/60 my-12">
+      <section id="faq" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto my-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
           <div className="md:col-span-4 space-y-3">
             <ScrollReveal delay={100} distance={20}>
@@ -921,7 +906,7 @@ export default function App() {
               </p>
             </ScrollReveal>
 
-            <div className="space-y-4 pt-4 border-t border-zinc-200/60">
+            <div className="space-y-4 pt-4">
               {currentFaq.map((faqItem, idx) => {
                 const isExpanded = expandedFaq === faqItem.number;
                 return (
@@ -1152,13 +1137,6 @@ export default function App() {
         onClosed={handleBlindsClosed}
         onOpened={handleBlindsOpened}
       />
-
-      {/* ------------------------------------------------------------- */}
-      {/* APPLE HELLO INTRO OVERLAY */}
-      {/* ------------------------------------------------------------- */}
-      {showIntro && (
-        <AppleHelloIntro onComplete={() => setShowIntro(false)} />
-      )}
     </div>
   );
 }

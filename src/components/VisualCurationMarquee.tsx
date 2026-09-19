@@ -81,7 +81,7 @@ export const VisualCurationMarquee: React.FC<VisualCurationMarqueeProps> = () =>
   }, []);
 
   return (
-    <section className="relative w-screen left-1/2 -translate-x-1/2 py-8 sm:py-10 my-4 overflow-hidden border-y border-zinc-200/50 bg-[#fbfbfa]">
+    <section className="relative w-screen left-1/2 -translate-x-1/2 py-8 sm:py-10 my-4 overflow-hidden bg-white">
       {/* Viewport marquee with ample headroom preventing card clipping */}
       <div className="w-full h-[250px] sm:h-[260px] md:h-[280px] relative flex items-center justify-center select-none">
         <MarqueeAlongSvgPath

@@ -379,7 +379,7 @@ export const AboutMePage: React.FC<Props> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#fafaf9] text-[#121212] pt-24 pb-20 px-4 sm:px-8 max-w-5xl mx-auto flex flex-col justify-between animate-in fade-in duration-700 relative">
+    <div className="min-h-screen bg-white text-[#121212] pt-24 pb-20 px-4 sm:px-8 max-w-5xl mx-auto flex flex-col justify-between animate-in fade-in duration-700 relative">
       
       <div className="space-y-12">
         
@@ -432,7 +432,7 @@ export const AboutMePage: React.FC<Props> = ({
         </div>
 
         {/* SECTION 3: [who am i] */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start pt-10 border-t border-zinc-200/60">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start pt-10">
           <div className="md:col-span-3 font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
             {t.whoAmITitle}
           </div>
@@ -446,13 +446,11 @@ export const AboutMePage: React.FC<Props> = ({
         </div>
 
         {/* SECTION 4: [what i do] COLLAGE & DESCRIPTION IN THE CENTER */}
-        <div className="pt-16 border-t border-zinc-200/60">
+        <div className="pt-16">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative py-8">
             
             {/* Left Photo Pair (4 cols) */}
             <div className="lg:col-span-4 flex items-center justify-center gap-4 relative">
-              {/* Horizontal line passing behind */}
-              <div className="absolute left-0 right-0 h-[1px] bg-zinc-200/80 z-0 top-1/2 -translate-y-1/2"></div>
               <div className="w-24 sm:w-28 aspect-[3/4] bg-zinc-200 overflow-hidden relative border border-zinc-200 shadow-xs z-10 mt-8">
                 <ShutterRevealImage
                   src="/profile-2.webp"
@@ -464,7 +462,7 @@ export const AboutMePage: React.FC<Props> = ({
             </div>
 
             {/* Center: Description Text */}
-            <div className="lg:col-span-4 text-center px-4 space-y-4 z-10 bg-[#fafaf9]/90 py-4">
+            <div className="lg:col-span-4 text-center px-4 space-y-4 z-10 bg-white/90 py-4">
               <div className="font-mono-code text-[11px] text-zinc-400 lowercase tracking-widest">
                 {t.whatIDoTitle}
               </div>
@@ -478,8 +476,6 @@ export const AboutMePage: React.FC<Props> = ({
 
             {/* Right Photo Pair (4 cols) */}
             <div className="lg:col-span-4 flex items-center justify-center gap-4 relative">
-              {/* Horizontal line passing behind */}
-              <div className="absolute left-0 right-0 h-[1px] bg-zinc-200/80 z-0 top-1/2 -translate-y-1/2"></div>
               <div className="w-24 sm:w-28 aspect-[3/4] bg-zinc-200 overflow-hidden relative border border-zinc-200 shadow-xs z-10">
                 <ShutterRevealImage
                   src="/profile-3.webp"
@@ -494,7 +490,7 @@ export const AboutMePage: React.FC<Props> = ({
         </div>
 
         {/* SECTION 5: [selected works] SUMMARY */}
-        <div className="pt-16 border-t border-zinc-200/60">
+        <div className="pt-16">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
             <div className="md:col-span-4 space-y-2">
               <div className="font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
@@ -544,7 +540,7 @@ export const AboutMePage: React.FC<Props> = ({
         </div>
 
         {/* SECTION 6: [discover me] INTERACTIVE CANVAS DRAWING BOARDS */}
-        <div className="pt-16 border-t border-zinc-200/60">
+        <div className="pt-16">
           <div className="text-center space-y-2 mb-12">
             <span className="font-mono-code text-[11px] text-zinc-400 lowercase tracking-widest block">{t.discoverMeTitle}</span>
             <p className="text-xs sm:text-sm text-zinc-400 font-mono-code max-w-md mx-auto lowercase">{t.discoverMeSub}</p>
@@ -566,7 +562,7 @@ export const AboutMePage: React.FC<Props> = ({
                   className={`relative aspect-square w-full border border-dashed rounded-2xl select-none touch-none overflow-hidden transition-all duration-300 ${
                     completedShapes.puzzle 
                       ? 'bg-emerald-50/20 border-emerald-300' 
-                      : 'bg-[#fafaf9] border-zinc-300 hover:border-zinc-500'
+                      : 'bg-white border-zinc-300 hover:border-zinc-500'
                   }`}
                   style={{
                     backgroundImage: 'radial-gradient(circle, #e2e8f0 1.2px, transparent 1.2px)',
@@ -657,7 +653,7 @@ export const AboutMePage: React.FC<Props> = ({
                   className={`relative aspect-square w-full border border-dashed rounded-2xl select-none touch-none overflow-hidden transition-all duration-300 ${
                     completedShapes.pen 
                       ? 'bg-emerald-50/20 border-emerald-300' 
-                      : 'bg-[#fafaf9] border-zinc-300 hover:border-zinc-500'
+                      : 'bg-white border-zinc-300 hover:border-zinc-500'
                   }`}
                   style={{
                     backgroundImage: 'radial-gradient(circle, #e2e8f0 1.2px, transparent 1.2px)',
@@ -748,7 +744,7 @@ export const AboutMePage: React.FC<Props> = ({
                   className={`relative aspect-square w-full border border-dashed rounded-2xl select-none touch-none overflow-hidden transition-all duration-300 ${
                     completedShapes.checkmark 
                       ? 'bg-emerald-50/20 border-emerald-300' 
-                      : 'bg-[#fafaf9] border-zinc-300 hover:border-zinc-500'
+                      : 'bg-white border-zinc-300 hover:border-zinc-500'
                   }`}
                   style={{
                     backgroundImage: 'radial-gradient(circle, #e2e8f0 1.2px, transparent 1.2px)',
@@ -840,7 +836,7 @@ export const AboutMePage: React.FC<Props> = ({
         </div>
 
         {/* SECTION 7: [what i work with] TECH ICONS GRID */}
-        <div className="pt-16 border-t border-zinc-200/60 text-center">
+        <div className="pt-16 text-center">
           <div className="space-y-1.5 mb-10">
             <span className="font-mono-code text-[11px] text-zinc-400 lowercase tracking-widest block">{t.whatIWorkWith}</span>
           </div>
@@ -853,12 +849,12 @@ export const AboutMePage: React.FC<Props> = ({
                 {techLogos.map((tech) => (
                   <div 
                     key={tech.name} 
-                    className="p-3.5 bg-[#f5f5f4] hover:bg-black hover:text-white rounded-2xl border border-zinc-200/50 hover:border-black flex items-center justify-center transition-all duration-300 hover:scale-105 group relative cursor-pointer"
+                    className="p-3.5 bg-white hover:bg-black hover:text-white rounded-2xl border border-zinc-200/80 hover:border-black flex items-center justify-center transition-all duration-300 hover:scale-105 group relative cursor-pointer shadow-xs"
                   >
                     {tech.svg}
                     
                     {/* Tooltip */}
-                    <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-[#fafaf9] text-[9px] font-mono-code px-2 py-0.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-md z-10">
+                    <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-white text-[9px] font-mono-code px-2 py-0.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-md z-10">
                       {tech.name}
                     </span>
                   </div>
@@ -870,7 +866,7 @@ export const AboutMePage: React.FC<Props> = ({
         </div>
 
         {/* SECTION 8: [now] */}
-        <div className="pt-16 border-t border-zinc-200/60">
+        <div className="pt-16">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div className="md:col-span-3 font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
               {t.nowTitle}
@@ -890,7 +886,7 @@ export const AboutMePage: React.FC<Props> = ({
         </div>
 
         {/* SECTION 9: [thought] SUMMARY */}
-        <div className="pt-16 border-t border-zinc-200/60">
+        <div className="pt-16">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div className="md:col-span-3 font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
               {tMaster.thoughtLabel}
@@ -902,7 +898,7 @@ export const AboutMePage: React.FC<Props> = ({
                 </div>
               </ScrollReveal>
 
-              <div className="space-y-4 pt-4 border-t border-zinc-200/40">
+              <div className="space-y-4 pt-4">
                 {philosophy.map((item, index) => (
                   <div
                     key={item.number}

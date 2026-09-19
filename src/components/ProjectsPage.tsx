@@ -81,7 +81,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
 
       {/* Filter Nav List matching screenshot style */}
       <ScrollReveal delay={250} distance={15}>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-12 border-b border-zinc-200/60 text-xs sm:text-[13px] font-mono-code text-zinc-400 select-none">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-12 text-xs sm:text-[13px] font-mono-code text-zinc-400 select-none">
           {filters.map((filter) => {
             const isActive = activeFilterId === filter.id;
             return (
@@ -107,15 +107,15 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
             {t.noProjects}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 border-t border-l border-zinc-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             {filteredProjects.map((project, idx) => (
               <ScrollReveal key={project.id} delay={idx * 80} distance={25}>
                 <div
                   onClick={() => onSelectProject(project)}
-                  className="group cursor-pointer flex flex-col justify-between h-full border-r border-b border-zinc-200 hover:bg-zinc-100/40 transition-all duration-300 relative overflow-hidden"
+                  className="group cursor-pointer flex flex-col justify-between h-full hover:bg-zinc-50 transition-all duration-300 relative overflow-hidden rounded-xl"
                 >
                   {/* High fidelity mockup frame */}
-                  <div className="w-full aspect-[4/3] relative overflow-hidden bg-zinc-50 border-b border-zinc-200/80">
+                  <div className="w-full aspect-[4/3] relative overflow-hidden bg-zinc-50 rounded-xl">
                     <ProjectMockup type={project.imageType} imageUrl={project.imageUrl} />
                   </div>
 

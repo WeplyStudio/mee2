@@ -42,7 +42,7 @@ export const Footer: React.FC<FooterProps> = ({
   return (
     <footer
       id="contact"
-      className="sticky bottom-0 z-0 pt-16 sm:pt-20 pb-12 px-6 sm:px-12 bg-[#fdfdfd] border-t border-zinc-200/80 min-h-[440px] overflow-hidden"
+      className="sticky bottom-0 z-0 pt-16 sm:pt-20 pb-12 px-6 sm:px-12 bg-white min-h-[440px] overflow-hidden"
     >
       <div 
         className="max-w-7xl mx-auto transition-all duration-300 ease-out will-change-transform"
@@ -171,7 +171,7 @@ export const Footer: React.FC<FooterProps> = ({
 
         {/* Giant [jays] Logo with Interactive Letter Animation & Tracking Reveal */}
         <ScrollReveal delay={100} distance={-30}>
-          <div className="py-8 border-t border-zinc-200/80 group">
+          <div className="py-8 group">
             <div className="flex items-center justify-between text-[18vw] font-black tracking-tighter text-zinc-950 leading-none select-none hover:tracking-normal transition-all duration-700 cursor-default">
               {logoLetters.map((char, index) => (
                 <span
@@ -195,7 +195,7 @@ export const Footer: React.FC<FooterProps> = ({
 
         {/* Bottom Copyright & Location Row */}
         <ScrollReveal delay={150} distance={-15}>
-          <div className="pt-8 border-t border-zinc-200/80 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-zinc-400 font-mono-code lowercase">
+          <div className="pt-8 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-zinc-400 font-mono-code lowercase">
             <span>indonesia</span>
             <span>{t.designedBy}</span>
           </div>

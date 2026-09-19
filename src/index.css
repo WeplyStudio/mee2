@@ -8,6 +8,7 @@
   /* Anti-copy: Disable text selection across the website */
   html,
   body {
+    background-color: #ffffff;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
