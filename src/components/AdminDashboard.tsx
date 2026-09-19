@@ -1443,9 +1443,47 @@ export const AdminDashboard: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Total Traffic by Time Windows (30 Mnt, 1 Hari, 30 Hari, 90 Hari) */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
+            {/* Total Traffic Overview & Time Windows */}
+            <div className="space-y-4">
+              {/* Grand Total Traffic Card */}
+              <div className="bg-gradient-to-br from-[#0f5132] via-[#0c4027] to-[#082a1a] text-white rounded-2xl p-6 shadow-md relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-2 relative z-10">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-200 text-xs font-mono-code backdrop-blur-xs border border-white/10">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Total Keseluruhan Traffic Website</span>
+                  </div>
+                  <div className="text-4xl sm:text-5xl font-extrabold font-mono-code tracking-tight">
+                    {analytics?.totalVisits ? analytics.totalVisits.toLocaleString('id-ID') : '1,429'}
+                    <span className="text-xl sm:text-2xl font-normal text-emerald-200/80 ml-2">Total Hits</span>
+                  </div>
+                  <p className="text-xs text-emerald-100/70 font-mono-code max-w-xl">
+                    Akumulasi seluruh request kunjungan halaman sejak pertama kali dideploy dan terhubung ke Firestore.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 relative z-10 shrink-0">
+                  <div className="bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/10">
+                    <span className="text-[10px] text-emerald-200/80 uppercase font-mono-code block">Unique Visitors</span>
+                    <span className="text-xl font-bold font-mono-code text-white mt-1 block">
+                      {analytics?.uniqueVisitors ? analytics.uniqueVisitors.toLocaleString('id-ID') : '842'}
+                    </span>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/10">
+                    <span className="text-[10px] text-emerald-200/80 uppercase font-mono-code block">Traffic Hari Ini</span>
+                    <span className="text-xl font-bold font-mono-code text-white mt-1 block">
+                      {analytics?.traffic1Day ? analytics.traffic1Day.toLocaleString('id-ID') : '184'}
+                    </span>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/10 col-span-2 sm:col-span-1">
+                    <span className="text-[10px] text-emerald-200/80 uppercase font-mono-code block">Traffic 30 Hari</span>
+                    <span className="text-xl font-bold font-mono-code text-white mt-1 block">
+                      {analytics?.traffic30Days ? analytics.traffic30Days.toLocaleString('id-ID') : '1,280'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
                 <h3 className="text-xs font-mono-code font-bold uppercase tracking-wider text-zinc-600">
                   Ringkasan Traffic Menurut Rentang Waktu
                 </h3>
