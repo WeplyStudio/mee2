@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 
 interface ShutterRevealImageProps {
   src: string;
+  srcSet?: string;
+  sizes?: string;
   alt?: string;
   className?: string;
   imgClassName?: string;
@@ -21,6 +23,8 @@ interface ShutterRevealImageProps {
  */
 export const ShutterRevealImage: React.FC<ShutterRevealImageProps> = ({
   src,
+  srcSet,
+  sizes,
   alt = '',
   className = '',
   imgClassName = 'w-full h-full object-cover',
@@ -109,6 +113,8 @@ export const ShutterRevealImage: React.FC<ShutterRevealImageProps> = ({
     >
       <img
         src={src}
+        srcSet={srcSet}
+        sizes={sizes}
         alt={alt}
         loading={loading}
         decoding={decoding}

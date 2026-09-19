@@ -409,6 +409,8 @@ export const AboutMePage: React.FC<Props> = ({
             <div className="aspect-[3/4] w-full sm:w-[90%] mx-auto overflow-hidden border border-zinc-200/50 shadow-md">
               <ShutterRevealImage
                 src="/profile-3.webp"
+                srcSet="/profile-3-400.webp 400w, /profile-3-600.webp 600w, /profile-3.webp 800w"
+                sizes="(max-width: 640px) 100vw, 360px"
                 alt="steward jason child"
                 delay={0.15}
                 className="w-full h-full"
@@ -422,6 +424,8 @@ export const AboutMePage: React.FC<Props> = ({
             <div className="aspect-[3/4] w-full overflow-hidden border border-zinc-200/50 shadow-xs rotate-[-1.5deg] hover:rotate-0 transition-transform duration-700">
               <ShutterRevealImage
                 src="/profile-2.webp"
+                srcSet="/profile-2-400.webp 400w, /profile-2.webp 600w"
+                sizes="360px"
                 alt="steward jason portrait"
                 delay={0.25}
                 className="w-full h-full"
@@ -454,6 +458,8 @@ export const AboutMePage: React.FC<Props> = ({
               <div className="w-24 sm:w-28 aspect-[3/4] bg-zinc-200 overflow-hidden relative border border-zinc-200 shadow-xs z-10 mt-8">
                 <ShutterRevealImage
                   src="/profile-2.webp"
+                  srcSet="/profile-2-400.webp 400w, /profile-2.webp 600w"
+                  sizes="120px"
                   alt="smiling portrait"
                   className="w-full h-full"
                   imgClassName="w-full h-full object-cover grayscale"
@@ -479,6 +485,8 @@ export const AboutMePage: React.FC<Props> = ({
               <div className="w-24 sm:w-28 aspect-[3/4] bg-zinc-200 overflow-hidden relative border border-zinc-200 shadow-xs z-10">
                 <ShutterRevealImage
                   src="/profile-3.webp"
+                  srcSet="/profile-3-400.webp 400w, /profile-3-600.webp 600w, /profile-3.webp 800w"
+                  sizes="120px"
                   alt="clay mask selfie"
                   className="w-full h-full"
                   imgClassName="w-full h-full object-cover grayscale contrast-125"

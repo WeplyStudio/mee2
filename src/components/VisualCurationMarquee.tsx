@@ -7,55 +7,55 @@ interface VisualCurationMarqueeProps {
 
 const imgs = [
   {
-    src: 'https://cdn.cosmos.so/b9909337-7a53-48bc-9672-33fbd0f040a1?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/b9909337-7a53-48bc-9672-33fbd0f040a1?format=webp&w=100&q=60',
     title: 'Typography & Form',
   },
   {
-    src: 'https://cdn.cosmos.so/ecdc9dd7-2862-4c28-abb1-dcc0947390f3?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/ecdc9dd7-2862-4c28-abb1-dcc0947390f3?format=webp&w=100&q=60',
     title: 'Editorial Design',
   },
   {
-    src: 'https://cdn.cosmos.so/79de41ec-baa4-4ac0-a9a4-c090005ca640?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/79de41ec-baa4-4ac0-a9a4-c090005ca640?format=webp&w=100&q=60',
     title: 'Mori Typeface',
   },
   {
-    src: 'https://cdn.cosmos.so/1a18b312-21cd-4484-bce5-9fb7ed1c5e01?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/1a18b312-21cd-4484-bce5-9fb7ed1c5e01?format=webp&w=100&q=60',
     title: 'Ampersand Study',
   },
   {
-    src: 'https://cdn.cosmos.so/d765f64f-7a66-462f-8b2d-3d7bc8d7db55?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/d765f64f-7a66-462f-8b2d-3d7bc8d7db55?format=webp&w=100&q=60',
     title: 'Minimal Artifact',
   },
   {
-    src: 'https://cdn.cosmos.so/6b9f08ea-f0c5-471f-a620-71221ff1fb65?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/6b9f08ea-f0c5-471f-a620-71221ff1fb65?format=webp&w=100&q=60',
     title: 'Type Exploration',
   },
   {
-    src: 'https://cdn.cosmos.so/40a09525-4b00-4666-86f0-3c45f5d77605?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/40a09525-4b00-4666-86f0-3c45f5d77605?format=webp&w=100&q=60',
     title: 'Spatial Balance',
   },
   {
-    src: 'https://cdn.cosmos.so/14f05ab6-b4d0-4605-9007-8a2190a249d0?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/14f05ab6-b4d0-4605-9007-8a2190a249d0?format=webp&w=100&q=60',
     title: 'Form & Light',
   },
   {
-    src: 'https://cdn.cosmos.so/d05009a2-a2f8-4a4c-a0de-e1b0379dddb8?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/d05009a2-a2f8-4a4c-a0de-e1b0379dddb8?format=webp&w=100&q=60',
     title: 'Mono Aesthetics',
   },
   {
-    src: 'https://cdn.cosmos.so/ba646e35-efc2-494a-961b-b40f597e6fc9?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/ba646e35-efc2-494a-961b-b40f597e6fc9?format=webp&w=100&q=60',
     title: 'Godfrey Dadich',
   },
   {
-    src: 'https://cdn.cosmos.so/e899f9c3-ed48-4899-8c16-fbd5a60705da?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/e899f9c3-ed48-4899-8c16-fbd5a60705da?format=webp&w=100&q=60',
     title: 'Geometry & Rhythm',
   },
   {
-    src: 'https://cdn.cosmos.so/24e83c11-c607-45cd-88fb-5059960b56a0?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/24e83c11-c607-45cd-88fb-5059960b56a0?format=webp&w=100&q=60',
     title: 'Print Culture',
   },
   {
-    src: 'https://cdn.cosmos.so/cd346bce-f415-4ea7-8060-99c5f7c1741a?format=webp&w=160&q=75',
+    src: 'https://cdn.cosmos.so/cd346bce-f415-4ea7-8060-99c5f7c1741a?format=webp&w=100&q=60',
     title: 'Organic Motion',
   },
 ];

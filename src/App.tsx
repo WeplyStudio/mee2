@@ -533,8 +533,11 @@ export default function App() {
               {/* Photo Image with scroll-triggered shutter reveal */}
               <ShutterRevealImage
                 src="/profile-3.webp"
+                srcSet="/profile-3-400.webp 400w, /profile-3-600.webp 600w, /profile-3.webp 800w"
+                sizes="(max-width: 640px) 256px, (max-width: 768px) 320px, 384px"
                 alt="Steward Jason Liuwindra"
                 fetchPriority="high"
+                loading="eager"
                 decoding="async"
                 className="w-full h-full"
                 imgClassName="w-full h-full object-cover object-center grayscale contrast-115 group-hover:scale-105 transition-transform duration-700 ease-out"
@@ -577,6 +580,8 @@ export default function App() {
             <div className="w-32 h-44 sm:w-36 sm:h-52 rounded-none bg-zinc-800 overflow-hidden shadow-lg border border-zinc-200">
               <ShutterRevealImage
                 src="/profile-2.webp"
+                srcSet="/profile-2-400.webp 400w, /profile-2.webp 600w"
+                sizes="(max-width: 640px) 128px, 144px"
                 alt="Steward Jason Liuwindra selfie"
                 loading="lazy"
                 decoding="async"

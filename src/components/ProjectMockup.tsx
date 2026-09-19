@@ -14,10 +14,18 @@ const PROJECT_IMAGE_MAP: Record<string, string> = {
   krigstudio: '/krigstudio.webp',
 };
 
+const PROJECT_SRCSET_MAP: Record<string, string> = {
+  zylo: '/zylo-600.webp 600w, /zylo-900.webp 900w, /zylo.webp 1200w',
+  trufin: '/trufin-600.webp 600w, /trufin-900.webp 900w, /trufin.webp 1200w',
+  krigstudio: '/krigstudio-600.webp 600w, /krigstudio-900.webp 900w, /krigstudio.webp 1200w',
+};
+
 export const ProjectMockup: React.FC<Props> = ({ type, className = '', variant = 'card', imageUrl }) => {
   const [loaded, setLoaded] = useState(false);
   const imgRef = React.useRef<HTMLImageElement>(null);
   const projectImg = imageUrl || PROJECT_IMAGE_MAP[type];
+  const projectSrcSet = PROJECT_SRCSET_MAP[type];
+  const sizes = variant === 'screen' ? '(max-width: 1024px) 100vw, 1200px' : '(max-width: 768px) 100vw, 400px';
 
   React.useEffect(() => {
     if (imgRef.current?.complete) {
@@ -35,6 +43,8 @@ export const ProjectMockup: React.FC<Props> = ({ type, className = '', variant =
         <img 
           ref={imgRef}
           src={projectImg} 
+          srcSet={projectSrcSet}
+          sizes={sizes}
           alt={`${type} preview`}
           loading="lazy"
           decoding="async"

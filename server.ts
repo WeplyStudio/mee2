@@ -11,10 +11,22 @@ const app = express();
 const PORT = 3000;
 
 // Enable HTTP response compression (gzip / deflate) for faster asset transmission
-app.use(compression());
+app.use(
+  compression({
+    level: 6,
+    threshold: 0, // Compress all text responses regardless of size
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+  })
+);
 
 // High-efficiency long-term cache headers for all static files (images, scripts, styles, fonts)
 app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   if (req.path.match(/\.(js|css|webp|jpeg|jpg|png|svg|woff2?|ttf|eot|ico)$/)) {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   }
@@ -87,6 +99,42 @@ function sanitizeHtml(str: string): string {
  */
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+/**
+ * Dynamic robots.txt
+ * Ensures Sitemap always specifies fully qualified absolute URL with protocol (RFC 9309 compliant)
+ */
+app.get('/robots.txt', (req: Request, res: Response) => {
+  const host = req.get('host') || 'itsjason.my.id';
+  const proto = req.get('x-forwarded-proto') || (req.protocol === 'https' ? 'https' : 'https');
+  const origin = `${proto}://${host}`;
+  res.type('text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(`# Robots.txt for Jason Portfolio
+User-agent: *
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+# Sitemaps & LLM Context
+Sitemap: ${origin}/sitemap.xml
+Sitemap: https://itsjason.my.id/sitemap.xml
+Sitemap: https://www.itsjason.my.id/sitemap.xml
+`);
+});
+
+/**
+ * Valid XML Sitemap endpoint with proper Content-Type
+ */
+app.get('/sitemap.xml', (req: Request, res: Response) => {
+  const sitemapFile = path.join(process.cwd(), 'public', 'sitemap.xml');
+  res.type('application/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  if (fs.existsSync(sitemapFile)) {
+    return res.sendFile(sitemapFile);
+  }
+  res.status(404).send('Sitemap not found');
 });
 
 /**
