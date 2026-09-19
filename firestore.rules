@@ -14,6 +14,18 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // Team members collaboration collection
+    match /team_members/{memberId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Dashboard reminders and schedule
+    match /dashboard_reminders/{reminderId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // Analytics: visitors can log pageviews; reading/updating is permitted for dashboard
     match /analytics_events/{eventId} {
       allow create: if true;

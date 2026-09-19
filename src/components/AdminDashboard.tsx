@@ -56,9 +56,16 @@ import {
   deleteProjectFromFirestore,
   fetchSiteSettings,
   saveSiteSettings,
+  fetchTeamMembers,
+  saveTeamMember,
+  deleteTeamMember,
+  fetchDashboardReminder,
+  saveDashboardReminder,
   VisitorAnalyticsSummary,
   VisitorLogEntry,
-  SiteImageSettings
+  SiteImageSettings,
+  TeamMember,
+  DashboardReminder
 } from '../lib/firebase';
 import { Project } from '../types';
 import { getProjectsData } from '../data/portfolioData';
@@ -115,34 +122,51 @@ export const AdminDashboard: React.FC<Props> = ({
   };
 
   // Team Collaboration state
-  const [teamMembers, setTeamMembers] = useState([
-    { name: "Alexandra Deff", role: "Github Project Repository", status: "Completed", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100" },
-    { name: "Edwin Adenike", role: "Integrate User Authentication System", status: "In Progress", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100" },
-    { name: "Isaac Oluwatemilorun", role: "Develop Search and Filter Functionality", status: "Pending", avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=100" },
-    { name: "David Oshodi", role: "Responsive Layout for Homepage", status: "In Progress", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100" }
-  ]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [isLoadingTeam, setIsLoadingTeam] = useState(false);
+
+  // Dashboard Reminder state
+  const [reminder, setReminder] = useState<DashboardReminder>({
+    id: 'current',
+    title: 'Meeting with Arc Company',
+    time: '02.00 pm - 04.00 pm',
+    actionUrl: '',
+  });
 
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberRole, setNewMemberRole] = useState('');
   const [newMemberStatus, setNewMemberStatus] = useState<'Completed' | 'In Progress' | 'Pending'>('In Progress');
 
-  const handleAddMember = (e: React.FormEvent) => {
+  const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMemberName.trim() || !newMemberRole.trim()) return;
-    setTeamMembers([
-      ...teamMembers,
-      {
-        name: newMemberName,
-        role: newMemberRole,
+    try {
+      await saveTeamMember({
+        name: newMemberName.trim(),
+        role: newMemberRole.trim(),
         status: newMemberStatus,
-        avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100`
-      }
-    ]);
-    setNewMemberName('');
-    setNewMemberRole('');
-    setIsAddMemberOpen(false);
-    showToast(`Kolaborator "${newMemberName}" berhasil ditambahkan.`);
+        avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100`,
+      });
+      await loadTeamData();
+      setNewMemberName('');
+      setNewMemberRole('');
+      setIsAddMemberOpen(false);
+      showToast(`Kolaborator "${newMemberName}" berhasil disimpan di database.`);
+    } catch (err) {
+      showToast('Gagal menyimpan member: ' + String(err));
+    }
+  };
+
+  const handleDeleteMember = async (id: string, name: string) => {
+    if (!confirm(`Hapus kolaborator "${name}" dari database?`)) return;
+    try {
+      await deleteTeamMember(id);
+      await loadTeamData();
+      showToast(`Member "${name}" berhasil dihapus.`);
+    } catch (err) {
+      showToast('Gagal menghapus member');
+    }
   };
 
   // Analytics State
@@ -208,7 +232,47 @@ export const AdminDashboard: React.FC<Props> = ({
     loadAnalytics();
     loadProjects();
     loadSiteImages();
+    loadTeamData();
+    loadReminderData();
   }, [isAuthenticated]);
+
+  const loadTeamData = async () => {
+    setIsLoadingTeam(true);
+    try {
+      const members = await fetchTeamMembers();
+      if (members.length > 0) {
+        setTeamMembers(members);
+      } else {
+        // Seed default team members if database is currently empty
+        const initialMembers: Array<{ name: string; role: string; status: 'Completed' | 'In Progress' | 'Pending'; avatar: string }> = [
+          { name: "Alexandra Deff", role: "Github Project Repository", status: "Completed", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100" },
+          { name: "Edwin Adenike", role: "Integrate User Authentication System", status: "In Progress", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100" },
+          { name: "Isaac Oluwatemilorun", role: "Develop Search and Filter Functionality", status: "Pending", avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=100" },
+          { name: "David Oshodi", role: "Responsive Layout for Homepage", status: "In Progress", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100" }
+        ];
+        for (const m of initialMembers) {
+          await saveTeamMember(m);
+        }
+        const synced = await fetchTeamMembers();
+        setTeamMembers(synced.length > 0 ? synced : (initialMembers as any));
+      }
+    } catch (err) {
+      console.error('Error loading team:', err);
+    } finally {
+      setIsLoadingTeam(false);
+    }
+  };
+
+  const loadReminderData = async () => {
+    try {
+      const data = await fetchDashboardReminder();
+      if (data) {
+        setReminder(data);
+      }
+    } catch (err) {
+      console.error('Error loading reminder:', err);
+    }
+  };
 
   const loadAnalytics = async () => {
     setIsLoadingAnalytics(true);
@@ -890,16 +954,18 @@ export const AdminDashboard: React.FC<Props> = ({
                 </div>
                 <div>
                   <div className="text-3xl font-bold tracking-tight">
-                    {analytics?.totalVisits ? analytics.totalVisits.toLocaleString('id-ID') : '1,429'}
+                    {analytics ? analytics.totalVisits.toLocaleString('id-ID') : '...'}
                   </div>
                   <div className="text-[10px] text-white/70 mt-0.5 flex items-center gap-1.5">
                     <TrendingUp className="w-3 h-3 text-emerald-300" />
-                    <span className="font-semibold text-emerald-200">+18.4%</span>
-                    <span>vs bulan lalu</span>
+                    <span className="font-semibold text-emerald-200">
+                      {analytics ? `${analytics.traffic1Day} Hari Ini` : 'Realtime'}
+                    </span>
+                    <span>• {analytics ? `${analytics.traffic30Days} (30 hr)` : 'Tersinkron'}</span>
                   </div>
                 </div>
                 <div className="text-[10px] text-white/80 font-mono-code pt-2 border-t border-white/10 flex items-center justify-between">
-                  <span>{analytics?.uniqueVisitors || 842} Unique Visitors</span>
+                  <span>{analytics ? analytics.uniqueVisitors : 0} Unique Visitors</span>
                   <span
                     className="text-emerald-300 font-semibold cursor-pointer hover:underline"
                     onClick={() => setActiveTab('analytics')}
@@ -1151,17 +1217,36 @@ export const AdminDashboard: React.FC<Props> = ({
               <div className="space-y-6">
                 {/* Reminders box */}
                 <div className="bg-[#eef6f0] border border-[#d1e7dd] p-5 rounded-[24px] shadow-3xs relative overflow-hidden">
-                  <span className="text-[10px] font-bold text-[#0f5132] tracking-widest uppercase block mb-1">Reminders</span>
-                  <h3 className="text-sm font-bold text-zinc-900">Meeting with Arc Company</h3>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-[#0f5132] tracking-widest uppercase block">Reminders</span>
+                    <span className="text-[9px] bg-white/70 px-2 py-0.5 rounded-md font-bold text-[#0f5132] border border-[#d1e7dd]">
+                      Firestore Synced
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-zinc-900">{reminder.title || 'Meeting with Arc Company'}</h3>
                   <div className="text-xs text-zinc-600 mt-1 mb-4 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                    <span>02.00 pm - 04.00 pm</span>
+                    <span>{reminder.time || '02.00 pm - 04.00 pm'}</span>
                   </div>
                   <button
-                    onClick={() => alert('Memulai meeting virtual dengan Arc Company...')}
-                    className="w-full py-2 bg-[#0f5132] hover:bg-[#0c4027] text-white text-xs font-semibold rounded-xl shadow-xs transition-all"
+                    onClick={async () => {
+                      const newTitle = prompt('Edit Judul Reminder / Jadwal:', reminder.title);
+                      if (newTitle === null) return;
+                      const newTime = prompt('Edit Waktu (contoh: 02.00 pm - 04.00 pm):', reminder.time) || reminder.time;
+                      try {
+                        await saveDashboardReminder({
+                          title: newTitle.trim() || reminder.title,
+                          time: newTime.trim() || reminder.time,
+                        });
+                        await loadReminderData();
+                        showToast('Jadwal reminder berhasil diperbarui di database!');
+                      } catch {
+                        showToast('Gagal memperbarui reminder');
+                      }
+                    }}
+                    className="w-full py-2 bg-[#0f5132] hover:bg-[#0c4027] text-white text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer"
                   >
-                    Start Meeting
+                    Edit Jadwal & Reminder
                   </button>
                 </div>
 
@@ -1313,33 +1398,50 @@ export const AdminDashboard: React.FC<Props> = ({
                 </div>
 
                 <div className="space-y-3 max-h-60 overflow-y-auto">
-                  {teamMembers.map((member, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <img
-                          src={member.avatar}
-                          alt={member.name}
-                          className="w-8 h-8 rounded-full object-cover border border-zinc-200"
-                        />
-                        <div className="min-w-0">
-                          <span className="font-bold text-zinc-800 block truncate leading-tight">{member.name}</span>
-                          <span className="text-[10px] text-zinc-400 truncate block mt-0.5">{member.role}</span>
+                  {isLoadingTeam ? (
+                    <p className="text-xs text-zinc-400 py-3 text-center">Loading team...</p>
+                  ) : teamMembers.length > 0 ? (
+                    teamMembers.map((member, idx) => (
+                      <div key={member.id || idx} className="flex items-center justify-between text-xs group/mem">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <img
+                            src={member.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100'}
+                            alt={member.name}
+                            className="w-8 h-8 rounded-full object-cover border border-zinc-200"
+                          />
+                          <div className="min-w-0">
+                            <span className="font-bold text-zinc-800 block truncate leading-tight">{member.name}</span>
+                            <span className="text-[10px] text-zinc-400 truncate block mt-0.5">{member.role}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                              member.status === 'Completed'
+                                ? 'bg-[#eef6f0] text-[#0f5132] border border-[#d1e7dd]'
+                                : member.status === 'In Progress'
+                                ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                                : 'bg-zinc-100 text-zinc-600'
+                            }`}
+                          >
+                            {member.status}
+                          </span>
+                          {member.id && (
+                            <button
+                              onClick={() => handleDeleteMember(member.id, member.name)}
+                              className="opacity-0 group-hover/mem:opacity-100 text-zinc-400 hover:text-red-500 transition-opacity p-0.5"
+                              title="Hapus member"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
                         </div>
                       </div>
-
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[9px] font-bold shrink-0 ${
-                          member.status === 'Completed'
-                            ? 'bg-[#eef6f0] text-[#0f5132] border border-[#d1e7dd]'
-                            : member.status === 'In Progress'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                            : 'bg-zinc-100 text-zinc-600'
-                        }`}
-                      >
-                        {member.status}
-                      </span>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-xs text-zinc-400 py-3 text-center">Belum ada kolaborator.</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1453,7 +1555,7 @@ export const AdminDashboard: React.FC<Props> = ({
                     <span>Total Keseluruhan Traffic Website</span>
                   </div>
                   <div className="text-4xl sm:text-5xl font-extrabold font-mono-code tracking-tight">
-                    {analytics?.totalVisits ? analytics.totalVisits.toLocaleString('id-ID') : '1,429'}
+                    {analytics ? analytics.totalVisits.toLocaleString('id-ID') : '...'}
                     <span className="text-xl sm:text-2xl font-normal text-emerald-200/80 ml-2">Total Hits</span>
                   </div>
                   <p className="text-xs text-emerald-100/70 font-mono-code max-w-xl">
@@ -1465,19 +1567,19 @@ export const AdminDashboard: React.FC<Props> = ({
                   <div className="bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/10">
                     <span className="text-[10px] text-emerald-200/80 uppercase font-mono-code block">Unique Visitors</span>
                     <span className="text-xl font-bold font-mono-code text-white mt-1 block">
-                      {analytics?.uniqueVisitors ? analytics.uniqueVisitors.toLocaleString('id-ID') : '842'}
+                      {analytics ? analytics.uniqueVisitors.toLocaleString('id-ID') : 0}
                     </span>
                   </div>
                   <div className="bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/10">
                     <span className="text-[10px] text-emerald-200/80 uppercase font-mono-code block">Traffic Hari Ini</span>
                     <span className="text-xl font-bold font-mono-code text-white mt-1 block">
-                      {analytics?.traffic1Day ? analytics.traffic1Day.toLocaleString('id-ID') : '184'}
+                      {analytics ? analytics.traffic1Day.toLocaleString('id-ID') : 0}
                     </span>
                   </div>
                   <div className="bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/10 col-span-2 sm:col-span-1">
                     <span className="text-[10px] text-emerald-200/80 uppercase font-mono-code block">Traffic 30 Hari</span>
                     <span className="text-xl font-bold font-mono-code text-white mt-1 block">
-                      {analytics?.traffic30Days ? analytics.traffic30Days.toLocaleString('id-ID') : '1,280'}
+                      {analytics ? analytics.traffic30Days.toLocaleString('id-ID') : 0}
                     </span>
                   </div>
                 </div>

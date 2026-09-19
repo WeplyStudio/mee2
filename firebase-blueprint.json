@@ -63,6 +63,33 @@
         "marqueeImages": { "type": "string", "description": "JSON serialized array of visual curation images" },
         "updatedAt": { "type": "string", "description": "Last updated timestamp" }
       }
+    },
+    "TeamMember": {
+      "title": "TeamMember",
+      "description": "Collaborators and team members assigned to projects",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique collaborator id" },
+        "name": { "type": "string", "description": "Full name of member" },
+        "role": { "type": "string", "description": "Assigned task or role" },
+        "status": { "type": "string", "description": "Current status: Completed, In Progress, or Pending" },
+        "avatar": { "type": "string", "description": "Avatar photo URL" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      },
+      "required": ["name", "role", "status"]
+    },
+    "DashboardReminder": {
+      "title": "DashboardReminder",
+      "description": "Admin schedule and reminders",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique reminder id" },
+        "title": { "type": "string", "description": "Reminder title" },
+        "time": { "type": "string", "description": "Scheduled time" },
+        "actionUrl": { "type": "string", "description": "Target action link" },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp" }
+      },
+      "required": ["title", "time"]
     }
   },
   "firestore": {
@@ -81,6 +108,14 @@
     "/site_settings/{settingId}": {
       "schema": "SiteSettings",
       "description": "Global site image overrides"
+    },
+    "/team_members/{memberId}": {
+      "schema": "TeamMember",
+      "description": "Team collaborators collection"
+    },
+    "/dashboard_reminders/{reminderId}": {
+      "schema": "DashboardReminder",
+      "description": "Dashboard schedule reminders"
     }
   }
 }

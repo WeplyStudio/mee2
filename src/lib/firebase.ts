@@ -33,12 +33,31 @@ export interface TopPageEntry {
   percentage: number;
 }
 
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  status: 'Completed' | 'In Progress' | 'Pending';
+  avatar: string;
+  createdAt?: string;
+}
+
+export interface DashboardReminder {
+  id: string;
+  title: string;
+  time: string;
+  actionUrl?: string;
+  updatedAt?: string;
+}
+
 export interface VisitorAnalyticsSummary {
+  totalVisits: number;
+  totalUniqueVisitors: number;
+  uniqueVisitors: number;
   traffic30Min: number;
   traffic1Day: number;
   traffic30Days: number;
   traffic90Days: number;
-  totalUniqueVisitors: number;
   topPages: TopPageEntry[];
   referrers: Record<string, number>;
   deviceBreakdown: { mobile: number; desktop: number; tablet: number };
@@ -128,10 +147,45 @@ function detectBrowser(): string {
 }
 
 /**
+ * Check if the current client is an automated bot/script or headless crawler
+ */
+function isAutomatedBotOrScript(): boolean {
+  if (typeof window === 'undefined') return true;
+
+  // 1. Detect navigator.webdriver (Puppeteer, Selenium, Playwright, Cypress)
+  if (navigator.webdriver) return true;
+
+  // 2. Check user agent for common bot/crawler/scraping keywords
+  const ua = (navigator.userAgent || '').toLowerCase();
+  const botKeywords = [
+    'bot', 'crawl', 'spider', 'slurp', 'mediapartners', 'curl', 'wget', 'python',
+    'headlesschrome', 'phantomjs', 'selenium', 'axios', 'postman', 'httpclient',
+    'lighthouse', 'google-structured-data-testing-tool'
+  ];
+  if (botKeywords.some((keyword) => ua.includes(keyword))) {
+    return true;
+  }
+
+  // 3. Detect missing plugins/languages or abnormal headless browser properties
+  if (window.navigator.languages === undefined && !('ontouchstart' in window)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Log page view event to Firestore
  */
 export async function logVisitorPageView(path: string): Promise<void> {
   if (typeof window === 'undefined' || path.startsWith('/admin')) return;
+
+  // Ignore automated headless crawlers or script triggers to ensure 100% genuine traffic
+  if (isAutomatedBotOrScript()) {
+    console.debug('Visitor page view omitted: automated script/bot detected');
+    return;
+  }
+
   try {
     const vid = getOrCreateVisitorId();
     const device = detectDevice();
@@ -280,7 +334,7 @@ export async function fetchAnalyticsMetrics(): Promise<VisitorAnalyticsSummary> 
 
     const totalEvents = snapshot.docs.length;
 
-    // Calculate Top Pages with percentages
+    // Calculate Top Pages with percentages based strictly on real events
     const topPagesArray: TopPageEntry[] = Object.entries(pageCounts)
       .map(([path, visits]) => ({
         path,
@@ -298,26 +352,19 @@ export async function fetchAnalyticsMetrics(): Promise<VisitorAnalyticsSummary> 
       }));
 
     return {
-      traffic30Min: Math.max(traffic30Min, 3),
-      traffic1Day: Math.max(traffic1Day, 28),
-      traffic30Days: Math.max(traffic30Days, 184),
-      traffic90Days: Math.max(traffic90Days || totalEvents, 342),
-      totalUniqueVisitors: Math.max(uniqueVisitors.size, 89),
-      topPages:
-        topPagesArray.length > 0
-          ? topPagesArray
-          : [
-              { path: '/', visits: 142, percentage: 48 },
-              { path: '/projects', visits: 68, percentage: 23 },
-              { path: '/aboutme', visits: 45, percentage: 15 },
-              { path: '/project/zylo', visits: 27, percentage: 9 },
-              { path: '/contact', visits: 15, percentage: 5 },
-            ],
-      referrers: Object.keys(referrers).length > 0 ? referrers : { Direct: 120, 'google.com': 84, 'github.com': 42, 'instagram.com': 28 },
+      totalVisits: totalEvents,
+      totalUniqueVisitors: uniqueVisitors.size,
+      uniqueVisitors: uniqueVisitors.size,
+      traffic30Min,
+      traffic1Day,
+      traffic30Days,
+      traffic90Days,
+      topPages: topPagesArray,
+      referrers,
       deviceBreakdown: {
-        mobile: Math.max(mobileCount, 64),
-        desktop: Math.max(desktopCount, 112),
-        tablet: Math.max(tabletCount, 8),
+        mobile: mobileCount,
+        desktop: desktopCount,
+        tablet: tabletCount,
       },
       dailyTrend,
       lastPrunedCount: prunedCount,
@@ -325,29 +372,17 @@ export async function fetchAnalyticsMetrics(): Promise<VisitorAnalyticsSummary> 
   } catch (error) {
     console.error('Error fetching analytics metrics:', error);
     return {
-      traffic30Min: 3,
-      traffic1Day: 28,
-      traffic30Days: 184,
-      traffic90Days: 342,
-      totalUniqueVisitors: 89,
-      topPages: [
-        { path: '/', visits: 142, percentage: 48 },
-        { path: '/projects', visits: 68, percentage: 23 },
-        { path: '/aboutme', visits: 45, percentage: 15 },
-        { path: '/project/zylo', visits: 27, percentage: 9 },
-        { path: '/contact', visits: 15, percentage: 5 },
-      ],
-      referrers: { Direct: 120, 'google.com': 84, 'github.com': 42, 'instagram.com': 28 },
-      deviceBreakdown: { mobile: 64, desktop: 112, tablet: 8 },
-      dailyTrend: [
-        { date: '09-12', visits: 18, unique: 11 },
-        { date: '09-13', visits: 24, unique: 16 },
-        { date: '09-14', visits: 19, unique: 14 },
-        { date: '09-15', visits: 31, unique: 22 },
-        { date: '09-16', visits: 27, unique: 19 },
-        { date: '09-17', visits: 38, unique: 26 },
-        { date: '09-18', visits: 42, unique: 29 },
-      ],
+      totalVisits: 0,
+      totalUniqueVisitors: 0,
+      uniqueVisitors: 0,
+      traffic30Min: 0,
+      traffic1Day: 0,
+      traffic30Days: 0,
+      traffic90Days: 0,
+      topPages: [],
+      referrers: {},
+      deviceBreakdown: { mobile: 0, desktop: 0, tablet: 0 },
+      dailyTrend: [],
       lastPrunedCount: 0,
     };
   }
@@ -377,6 +412,94 @@ export async function fetchRecentVisitorLogs(limitCount = 20): Promise<VisitorLo
   } catch {
     return [];
   }
+}
+
+/**
+ * Fetch Team Members from Firestore
+ */
+export async function fetchTeamMembers(): Promise<TeamMember[]> {
+  try {
+    const colRef = collection(db, 'team_members');
+    const q = query(colRef, orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return [];
+    return snapshot.docs.map((d) => ({
+      id: d.id,
+      name: d.data().name || '',
+      role: d.data().role || '',
+      status: d.data().status || 'In Progress',
+      avatar: d.data().avatar || '',
+      createdAt: d.data().createdAt || '',
+    }));
+  } catch (err) {
+    console.error('Error fetching team members:', err);
+    return [];
+  }
+}
+
+/**
+ * Save or Add Team Member to Firestore
+ */
+export async function saveTeamMember(member: Partial<TeamMember> & { name: string; role: string }): Promise<string> {
+  const memberId = member.id || 'member_' + Date.now().toString(36);
+  const docRef = doc(db, 'team_members', memberId);
+  await setDoc(
+    docRef,
+    {
+      id: memberId,
+      name: member.name,
+      role: member.role,
+      status: member.status || 'In Progress',
+      avatar: member.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100',
+      createdAt: member.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true }
+  );
+  return memberId;
+}
+
+/**
+ * Delete Team Member from Firestore
+ */
+export async function deleteTeamMember(memberId: string): Promise<void> {
+  const docRef = doc(db, 'team_members', memberId);
+  await deleteDoc(docRef);
+}
+
+/**
+ * Fetch Dashboard Reminder from Firestore
+ */
+export async function fetchDashboardReminder(): Promise<DashboardReminder | null> {
+  try {
+    const docRef = doc(db, 'dashboard_reminders', 'current');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as DashboardReminder;
+    }
+    return null;
+  } catch (err) {
+    console.error('Error fetching reminder:', err);
+    return null;
+  }
+}
+
+/**
+ * Save Dashboard Reminder to Firestore
+ */
+export async function saveDashboardReminder(reminder: Partial<DashboardReminder>): Promise<void> {
+  const docRef = doc(db, 'dashboard_reminders', 'current');
+  await setDoc(
+    docRef,
+    {
+      id: 'current',
+      title: reminder.title || 'Meeting with Arc Company',
+      time: reminder.time || '02.00 pm - 04.00 pm',
+      actionUrl: reminder.actionUrl || '',
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true }
+  );
 }
 
 /**
