@@ -26,6 +26,7 @@ import { Language, Project } from '../types';
 import { getProjectsData, getPhilosophyData, TRANSLATIONS } from '../data/portfolioData';
 import { ScrollReveal } from './ScrollReveal';
 import { ShutterRevealImage } from './ShutterRevealImage';
+import { SiteImageSettings } from '../lib/firebase';
 
 interface Props {
   lang: Language;
@@ -33,6 +34,8 @@ interface Props {
   onOpenContact: () => void;
   onSeeAllProjects?: () => void;
   onSelectProject?: (project: Project) => void;
+  onOpenThoughts?: () => void;
+  siteImages?: SiteImageSettings;
 }
 
 // Inline Web Audio Synthesizer for completion chime
@@ -94,7 +97,8 @@ export const AboutMePage: React.FC<Props> = ({
   onOpenContact,
   onSeeAllProjects,
   onSelectProject,
-  onOpenThoughts
+  onOpenThoughts,
+  siteImages,
 }) => {
   
   // Interactive drawing states
@@ -423,8 +427,8 @@ export const AboutMePage: React.FC<Props> = ({
           <div className="hidden md:flex md:col-span-4 flex-col justify-start md:pt-48">
             <div className="aspect-[3/4] w-full overflow-hidden border border-zinc-200/50 shadow-xs rotate-[-1.5deg] hover:rotate-0 transition-transform duration-700">
               <ShutterRevealImage
-                src="/profile-2.webp"
-                srcSet="/profile-2-400.webp 400w, /profile-2.webp 600w"
+                src={siteImages?.aboutImage || '/profile-2.webp'}
+                srcSet={siteImages?.aboutImage ? undefined : '/profile-2-400.webp 400w, /profile-2.webp 600w'}
                 sizes="360px"
                 alt="steward jason portrait"
                 delay={0.25}
@@ -457,8 +461,8 @@ export const AboutMePage: React.FC<Props> = ({
             <div className="lg:col-span-4 flex items-center justify-center gap-4 relative">
               <div className="w-24 sm:w-28 aspect-[3/4] bg-zinc-200 overflow-hidden relative border border-zinc-200 shadow-xs z-10 mt-8">
                 <ShutterRevealImage
-                  src="/profile-2.webp"
-                  srcSet="/profile-2-400.webp 400w, /profile-2.webp 600w"
+                  src={siteImages?.aboutImage || '/profile-2.webp'}
+                  srcSet={siteImages?.aboutImage ? undefined : '/profile-2-400.webp 400w, /profile-2.webp 600w'}
                   sizes="120px"
                   alt="smiling portrait"
                   className="w-full h-full"
@@ -484,8 +488,8 @@ export const AboutMePage: React.FC<Props> = ({
             <div className="lg:col-span-4 flex items-center justify-center gap-4 relative">
               <div className="w-24 sm:w-28 aspect-[3/4] bg-zinc-200 overflow-hidden relative border border-zinc-200 shadow-xs z-10">
                 <ShutterRevealImage
-                  src="/profile-3.webp"
-                  srcSet="/profile-3-400.webp 400w, /profile-3-600.webp 600w, /profile-3.webp 800w"
+                  src={siteImages?.heroImage || '/profile-3.webp'}
+                  srcSet={siteImages?.heroImage ? undefined : '/profile-3-400.webp 400w, /profile-3-600.webp 600w, /profile-3.webp 800w'}
                   sizes="120px"
                   alt="clay mask selfie"
                   className="w-full h-full"

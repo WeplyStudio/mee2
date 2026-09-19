@@ -10,6 +10,7 @@ interface ProjectsPageProps {
   onBack: () => void;
   onOpenContact: () => void;
   onSelectProject: (project: Project) => void;
+  customProjects?: Project[];
 }
 
 export const ProjectsPage: React.FC<ProjectsPageProps> = ({
@@ -17,9 +18,10 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
   onBack,
   onOpenContact,
   onSelectProject,
+  customProjects,
 }) => {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
-  const projects = getProjectsData(lang);
+  const projects = customProjects && customProjects.length > 0 ? customProjects : getProjectsData(lang);
   const [activeFilterId, setActiveFilterId] = useState<'all' | 'web' | 'fintech' | 'invitation'>('all');
 
   const filters: Array<{ id: 'all' | 'web' | 'fintech' | 'invitation'; label: string }> = [

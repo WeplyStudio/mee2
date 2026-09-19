@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState, useRef, Suspense, lazy } from 'react';
+import React, { useEffect, useState, useRef, useMemo, Suspense, lazy } from 'react';
 import Lenis from 'lenis';
 import { Volume2, VolumeX, ArrowUpRight } from 'lucide-react';
 import { AnimatedSoundWave } from './components/AnimatedIcons';
@@ -30,8 +30,16 @@ const ContactPage = lazy(() => import('./components/ContactPage').then(m => ({ d
 const ProjectDetailPage = lazy(() => import('./components/ProjectDetailPage').then(m => ({ default: m.ProjectDetailPage })));
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 const ContactModal = lazy(() => import('./components/ContactModal').then(m => ({ default: m.ContactModal })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
-type PageType = 'home' | 'aboutme' | 'projects' | 'contact' | 'project-detail' | '404';
+import {
+  SiteImageSettings,
+  fetchSiteSettings,
+  fetchProjectsFromFirestore,
+  logVisitorPageView
+} from './lib/firebase';
+
+type PageType = 'home' | 'aboutme' | 'projects' | 'contact' | 'project-detail' | '404' | 'admin';
 
 interface NavigationTarget {
   page: PageType;
@@ -63,6 +71,11 @@ function parseLocationFromUrl(currentLang: Language = 'en'): { page: PageType; p
   const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
   const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '').trim();
 
+  // If path or hash points to admin dashboard
+  if (rawPath === '/admin' || rawPath === '/dashboard' || hash === 'admin' || hash === 'dashboard') {
+    return { page: 'admin', project: null, path: '/admin' };
+  }
+
   // If path is root '/' but hash specifies a page (e.g. #aboutme, #/contact)
   const route = (rawPath === '/' && hash && !hash.startsWith('projects') && !hash.startsWith('services') && !hash.startsWith('stats') && !hash.startsWith('faq'))
     ? `/${hash}`
@@ -70,6 +83,10 @@ function parseLocationFromUrl(currentLang: Language = 'en'): { page: PageType; p
 
   if (route === '/' || route === '' || route === '/home') {
     return { page: 'home', project: null, path: '/' };
+  }
+
+  if (route === '/admin' || route === '/dashboard') {
+    return { page: 'admin', project: null, path: '/admin' };
   }
 
   if (route === '/aboutme' || route === '/about') {
@@ -118,6 +135,35 @@ export default function App() {
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
 
+  // Firestore persistent site settings and portfolio projects
+  const [siteSettings, setSiteSettings] = useState<SiteImageSettings | null>(null);
+  const [firestoreProjects, setFirestoreProjects] = useState<Project[]>([]);
+
+  const loadFirestoreData = async () => {
+    try {
+      const [settings, dbProjects] = await Promise.all([
+        fetchSiteSettings(),
+        fetchProjectsFromFirestore(),
+      ]);
+      if (settings) setSiteSettings(settings);
+      if (dbProjects && dbProjects.length > 0) setFirestoreProjects(dbProjects);
+    } catch (err) {
+      console.debug('Firestore sync error:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadFirestoreData();
+  }, []);
+
+  // Automatically log visitor traffic / analytics to Firestore
+  useEffect(() => {
+    if (currentPage !== 'admin' && typeof window !== 'undefined') {
+      const path = window.location.pathname || '/';
+      logVisitorPageView(path);
+    }
+  }, [currentPage]);
+
   // Blinds Curtain Transition State
   const [blindsStage, setBlindsStage] = useState<BlindsTransitionStage>('idle');
   const [transitionTitle, setTransitionTitle] = useState<string>('jason');
@@ -162,6 +208,8 @@ export default function App() {
       title = 'selected works';
     } else if (page === 'contact') {
       title = 'get in touch';
+    } else if (page === 'admin') {
+      title = 'admin dashboard';
     } else if (page === 'home') {
       title = 'jason';
     } else if (page === '404') {
@@ -214,6 +262,7 @@ export default function App() {
             else if (pending.page === 'aboutme') path = '/aboutme';
             else if (pending.page === 'projects') path = '/projects';
             else if (pending.page === 'contact') path = '/contact';
+            else if (pending.page === 'admin') path = '/admin';
             else if (pending.page === '404') path = '/404';
             else if (pending.page === 'project-detail' && pending.project) path = `/project/${pending.project.id}`;
             else path = `/${pending.page}`;
@@ -360,7 +409,9 @@ export default function App() {
     document.documentElement.lang = lang;
     let pageTitle = 'Jason — Designer & Software Engineer';
     
-    if (currentPage === 'projects') {
+    if (currentPage === 'admin') {
+      pageTitle = 'Admin Dashboard & Analytics — Jason';
+    } else if (currentPage === 'projects') {
       pageTitle = lang === 'id' ? 'Karya & Proyek — Jason' : 'Works & Projects — Jason';
     } else if (currentPage === 'project-detail' && activeProject) {
       pageTitle = `${activeProject.title} — Jason`;
@@ -424,7 +475,36 @@ export default function App() {
   };
 
   const t = TRANSLATIONS[lang];
-  const currentProjects = getProjectsData(lang);
+  const baseProjects = getProjectsData(lang);
+
+  const currentProjects: Project[] = useMemo(() => {
+    let list: Project[] = [];
+    if (firestoreProjects.length > 0) {
+      list = firestoreProjects.map((p) => {
+        const fallback = baseProjects.find((bp) => bp.id === p.id);
+        return {
+          ...fallback,
+          ...p,
+          title: p.title || fallback?.title || p.id,
+          category: p.category || fallback?.category || 'Project',
+          description: p.description || fallback?.description || '',
+          summary: (p as any).summary || fallback?.summary || '',
+          imageUrl: p.imageUrl || fallback?.imageUrl || '',
+        };
+      });
+    } else {
+      list = baseProjects;
+    }
+
+    // Apply any site image settings overrides
+    return list.map((p) => {
+      if (p.id === 'zylo' && siteSettings?.zyloImage) return { ...p, imageUrl: siteSettings.zyloImage };
+      if (p.id === 'trufin' && siteSettings?.trufinImage) return { ...p, imageUrl: siteSettings.trufinImage };
+      if (p.id === 'krigstudio' && siteSettings?.krigstudioImage) return { ...p, imageUrl: siteSettings.krigstudioImage };
+      return p;
+    });
+  }, [firestoreProjects, baseProjects, siteSettings]);
+
   const currentPrinciples = getPrinciplesList(lang);
   const currentPhilosophy = getPhilosophyData(lang);
   const currentServices = getServicesData(lang);
@@ -435,71 +515,81 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white text-[#121212] font-sans selection:bg-black selection:text-white relative">
       {/* ------------------------------------------------------------- */}
-      {/* TOP FLOATING / STICKY HEADER */}
+      {/* TOP FLOATING / STICKY HEADER (HIDDEN ON ADMIN DASHBOARD) */}
       {/* ------------------------------------------------------------- */}
-      <header className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 sm:py-5 flex items-center justify-between pointer-events-none transition-all">
-        {/* Left: empty spacer */}
-        <div className="flex-1 flex justify-start"></div>
+      {currentPage !== 'admin' && (
+        <header className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 sm:py-5 flex items-center justify-between pointer-events-none transition-all">
+          {/* Left: empty spacer */}
+          <div className="flex-1 flex justify-start"></div>
 
-        {/* Center / Primary: [ ] Morphing Menu Button to Card */}
-        <div className="flex justify-center">
-          <MorphingMenu
-            isOpen={isMenuOpen}
-            setIsOpen={setIsMenuOpen}
-            lang={lang}
-            onSelectLang={setLang}
-            isAudioPlaying={isAudioPlaying}
-            onToggleAudio={toggleSound}
-            onOpenContact={() => {
-              navigateTo('contact');
-              setIsMenuOpen(false);
-            }}
-            onOpenStory={() => {
-              navigateTo('aboutme');
-              setIsMenuOpen(false);
-            }}
-            onOpen404={() => {
-              navigateTo('404');
-              setIsMenuOpen(false);
-            }}
-            onScrollTo={(id) => {
-              if (id === 'projects') {
-                navigateTo('projects');
-              } else {
-                navigateTo('home');
-                setTimeout(() => {
-                  scrollToSection(id);
-                }, 100);
-              }
-            }}
-            menuLabel={t.menu}
-          />
-        </div>
+          {/* Center / Primary: [ ] Morphing Menu Button to Card */}
+          <div className="flex justify-center">
+            <MorphingMenu
+              isOpen={isMenuOpen}
+              setIsOpen={setIsMenuOpen}
+              lang={lang}
+              onSelectLang={setLang}
+              isAudioPlaying={isAudioPlaying}
+              onToggleAudio={toggleSound}
+              onOpenContact={() => {
+                navigateTo('contact');
+                setIsMenuOpen(false);
+              }}
+              onOpenStory={() => {
+                navigateTo('aboutme');
+                setIsMenuOpen(false);
+              }}
+              onOpen404={() => {
+                navigateTo('404');
+                setIsMenuOpen(false);
+              }}
+              onScrollTo={(id) => {
+                if (id === 'projects') {
+                  navigateTo('projects');
+                } else {
+                  navigateTo('home');
+                  setTimeout(() => {
+                    scrollToSection(id);
+                  }, 100);
+                }
+              }}
+              menuLabel={t.menu}
+            />
+          </div>
 
-        {/* Right: Red Language selector badge (Matching Screenshot) */}
-        <div className="flex-1 flex justify-end">
-          <button
-            onClick={() => {
-              uiSfx.playSwitch();
-              const languages: Language[] = ['en', 'id', 'de', 'ja'];
-              const nextIdx = (languages.indexOf(lang) + 1) % languages.length;
-              setLang(languages[nextIdx]);
-            }}
-            className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-[#d92338] hover:bg-[#c51c30] active:scale-95 text-white font-sans text-xs sm:text-[13px] rounded-[8px] sm:rounded-[9px] shadow-xs hover:shadow-sm transition-all cursor-pointer select-none"
-            title={`Language: ${lang}. Click to switch.`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-            <span className="font-medium lowercase tracking-tight">{lang}</span>
-          </button>
-        </div>
-      </header>
+          {/* Right: Red Language selector badge (Matching Screenshot) */}
+          <div className="flex-1 flex justify-end">
+            <button
+              onClick={() => {
+                uiSfx.playSwitch();
+                const languages: Language[] = ['en', 'id', 'de', 'ja'];
+                const nextIdx = (languages.indexOf(lang) + 1) % languages.length;
+                setLang(languages[nextIdx]);
+              }}
+              className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-[#d92338] hover:bg-[#c51c30] active:scale-95 text-white font-sans text-xs sm:text-[13px] rounded-[8px] sm:rounded-[9px] shadow-xs hover:shadow-sm transition-all cursor-pointer select-none"
+              title={`Language: ${lang}. Click to switch.`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+              <span className="font-medium lowercase tracking-tight">{lang}</span>
+            </button>
+          </div>
+        </header>
+      )}
 
       {/* ------------------------------------------------------------- */}
       {/* MAIN CONTENT LAYER (SLIDES UP OVER STICKY FOOTER REVEAL) */}
       {/* ------------------------------------------------------------- */}
       <div className="relative z-10 bg-white pb-16 min-h-screen">
         <Suspense fallback={<div className="min-h-screen bg-white" />}>
-          {currentPage === 'home' ? (
+          {currentPage === 'admin' ? (
+            <AdminDashboard
+              onBackToSite={() => {
+                navigateTo('home', '/');
+              }}
+              onProjectsUpdated={loadFirestoreData}
+              onSettingsUpdated={loadFirestoreData}
+            />
+          ) : currentPage === 'home' ? (
             <>
               {/* ------------------------------------------------------------- */}
               {/* HERO SECTION */}
@@ -532,8 +622,8 @@ export default function App() {
             <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-none bg-[#201d1c] overflow-hidden shadow-2xl relative group border border-zinc-900/10">
               {/* Photo Image with scroll-triggered shutter reveal */}
               <ShutterRevealImage
-                src="/profile-3.webp"
-                srcSet="/profile-3-400.webp 400w, /profile-3-600.webp 600w, /profile-3.webp 800w"
+                src={siteSettings?.heroImage || "/profile-3.webp"}
+                srcSet={siteSettings?.heroImage ? undefined : "/profile-3-400.webp 400w, /profile-3-600.webp 600w, /profile-3.webp 800w"}
                 sizes="(max-width: 640px) 256px, (max-width: 768px) 320px, 384px"
                 alt="Steward Jason Liuwindra"
                 fetchPriority="high"
@@ -579,8 +669,8 @@ export default function App() {
           <div className="md:col-span-4 flex justify-center">
             <div className="w-32 h-44 sm:w-36 sm:h-52 rounded-none bg-zinc-800 overflow-hidden shadow-lg border border-zinc-200">
               <ShutterRevealImage
-                src="/profile-2.webp"
-                srcSet="/profile-2-400.webp 400w, /profile-2.webp 600w"
+                src={siteSettings?.aboutImage || "/profile-2.webp"}
+                srcSet={siteSettings?.aboutImage ? undefined : "/profile-2-400.webp 400w, /profile-2.webp 600w"}
                 sizes="(max-width: 640px) 128px, 144px"
                 alt="Steward Jason Liuwindra selfie"
                 loading="lazy"
@@ -1028,6 +1118,7 @@ export default function App() {
       onSelectProject={(project) => {
         navigateTo('project-detail', undefined, { project });
       }}
+      siteImages={siteSettings || undefined}
     />
   ) : currentPage === 'projects' ? (
     <ProjectsPage
@@ -1041,6 +1132,7 @@ export default function App() {
       onSelectProject={(project) => {
         navigateTo('project-detail', undefined, { project });
       }}
+      customProjects={currentProjects}
     />
   ) : currentPage === 'project-detail' && localizedActiveProject ? (
     <ProjectDetailPage
@@ -1078,42 +1170,47 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* UNIFIED STICKY ANIMATED FOOTER (REVEALED FROM UNDERNEATH) */}
       {/* ------------------------------------------------------------- */}
-      <Footer
-        footerProgress={footerProgress}
-        lang={lang}
-        onNavigateHome={() => {
-          navigateTo('home');
-        }}
-        onNavigateAboutMe={() => {
-          navigateTo('aboutme');
-        }}
-        onOpenContact={() => {
-          navigateTo('contact');
-        }}
-        onScrollToProjects={() => {
-          navigateTo('projects');
-        }}
-        onScrollToServices={() => {
-          if (currentPage !== 'home') {
+      {currentPage !== 'admin' && (
+        <Footer
+          footerProgress={footerProgress}
+          lang={lang}
+          onNavigateHome={() => {
             navigateTo('home');
-            setTimeout(() => {
+          }}
+          onNavigateAboutMe={() => {
+            navigateTo('aboutme');
+          }}
+          onOpenContact={() => {
+            navigateTo('contact');
+          }}
+          onScrollToProjects={() => {
+            navigateTo('projects');
+          }}
+          onScrollToServices={() => {
+            if (currentPage !== 'home') {
+              navigateTo('home');
+              setTimeout(() => {
+                scrollToSection('services');
+              }, 120);
+            } else {
               scrollToSection('services');
-            }, 120);
-          } else {
-            scrollToSection('services');
-          }
-        }}
-        onScrollToFaq={() => {
-          if (currentPage !== 'home') {
-            navigateTo('home');
-            setTimeout(() => {
+            }
+          }}
+          onScrollToFaq={() => {
+            if (currentPage !== 'home') {
+              navigateTo('home');
+              setTimeout(() => {
+                scrollToSection('faq');
+              }, 120);
+            } else {
               scrollToSection('faq');
-            }, 120);
-          } else {
-            scrollToSection('faq');
-          }
-        }}
-      />
+            }
+          }}
+          onNavigateAdmin={() => {
+            navigateTo('admin', '/admin');
+          }}
+        />
+      )}
 
       {/* ------------------------------------------------------------- */}
       {/* MODALS */}
@@ -1131,7 +1228,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* BOTTOM BLACK SCROLL PROGRESS BAR */}
       {/* ------------------------------------------------------------- */}
-      <BottomScrollProgress currentPage={currentPage} />
+      {currentPage !== 'admin' && <BottomScrollProgress currentPage={currentPage} />}
 
       {/* ------------------------------------------------------------- */}
       {/* MOTION CURTAIN BLINDS PAGE TRANSITION OVERLAY */}

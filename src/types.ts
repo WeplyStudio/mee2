@@ -33,12 +33,14 @@ export interface Project {
   achievements: ProjectAchievement[];
   screens: ProjectScreen[];
   metrics?: { label: string; value: string }[];
-  imageType: 'zylo' | 'trufin' | 'krigstudio';
+  imageType: 'zylo' | 'trufin' | 'krigstudio' | string;
   imageUrl?: string;
   liveUrl?: string;
   accentColor: string;
   nextProjectId: string;
   nextProjectTitle: string;
+  order?: number;
+  featured?: boolean;
 }
 
 export interface Principle {
