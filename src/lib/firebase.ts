@@ -115,19 +115,23 @@ if (typeof window !== 'undefined') {
  * Anonymous Visitor Identifier
  */
 export function getOrCreateVisitorId(): string {
-  if (typeof window === 'undefined') return 'server';
-  const key = 'jason_portfolio_vid';
-  let vid = localStorage.getItem(key);
-  if (!vid) {
-    vid = 'v_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
-    localStorage.setItem(key, vid);
+  if (typeof window === 'undefined') return 'server_' + Math.random().toString(36).substring(2, 9);
+  try {
+    const key = 'jason_portfolio_vid';
+    let vid = localStorage.getItem(key);
+    if (!vid) {
+      vid = 'v_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+      localStorage.setItem(key, vid);
+    }
+    return vid;
+  } catch {
+    return 'v_anon_' + Math.random().toString(36).substring(2, 11);
   }
-  return vid;
 }
 
 function detectDevice(): 'desktop' | 'mobile' | 'tablet' {
   if (typeof window === 'undefined') return 'desktop';
-  const ua = navigator.userAgent.toLowerCase();
+  const ua = (navigator.userAgent || '').toLowerCase();
   if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
     return 'tablet';
   }
@@ -138,76 +142,51 @@ function detectDevice(): 'desktop' | 'mobile' | 'tablet' {
 }
 
 function detectBrowser(): string {
-  if (typeof window === 'undefined') return 'unknown';
-  const ua = navigator.userAgent;
+  if (typeof window === 'undefined') return 'Server/Request';
+  const ua = navigator.userAgent || '';
+  if (navigator.webdriver || ua.includes('Selenium') || ua.includes('WebDriver')) return 'Selenium/WebDriver';
+  if (ua.includes('HeadlessChrome') || ua.includes('Puppeteer') || ua.includes('Playwright')) return 'Headless/Automation';
+  if (ua.includes('python') || ua.includes('curl') || ua.includes('Postman') || ua.includes('axios')) return 'Script/HTTP Client';
   if (ua.includes('Chrome') && !ua.includes('Edg')) return 'Chrome';
   if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
   if (ua.includes('Firefox')) return 'Firefox';
   if (ua.includes('Edg')) return 'Edge';
-  return 'Other';
+  return 'Other / Web Client';
 }
 
 /**
- * Check if the current client is an automated bot/script or headless crawler
- */
-function isAutomatedBotOrScript(): boolean {
-  if (typeof window === 'undefined') return true;
-
-  // 1. Detect navigator.webdriver (Puppeteer, Selenium, Playwright, Cypress)
-  if (navigator.webdriver) return true;
-
-  // 2. Check user agent for common bot/crawler/scraping keywords
-  const ua = (navigator.userAgent || '').toLowerCase();
-  const botKeywords = [
-    'bot', 'crawl', 'spider', 'slurp', 'mediapartners', 'curl', 'wget', 'python',
-    'headlesschrome', 'phantomjs', 'selenium', 'axios', 'postman', 'httpclient',
-    'lighthouse', 'google-structured-data-testing-tool'
-  ];
-  if (botKeywords.some((keyword) => ua.includes(keyword))) {
-    return true;
-  }
-
-  // 3. Detect missing plugins/languages or abnormal headless browser properties
-  if (window.navigator.languages === undefined && !('ontouchstart' in window)) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Log page view event to Firestore
+ * Log page view event to Firestore (Records 100% of traffic, requests, selenium, automation, and visitors)
  */
 export async function logVisitorPageView(path: string): Promise<void> {
   if (typeof window === 'undefined' || path.startsWith('/admin')) return;
-
-  // Ignore automated headless crawlers or script triggers to ensure 100% genuine traffic
-  if (isAutomatedBotOrScript()) {
-    console.debug('Visitor page view omitted: automated script/bot detected');
-    return;
-  }
 
   try {
     const vid = getOrCreateVisitorId();
     const device = detectDevice();
     const browser = detectBrowser();
-    const referrer = document.referrer ? new URL(document.referrer).hostname : 'Direct';
+    let referrer = 'Direct';
+    try {
+      if (document.referrer) {
+        referrer = new URL(document.referrer).hostname || 'Direct';
+      }
+    } catch {
+      referrer = 'Direct';
+    }
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // 1. Add event to analytics_events
+    // Add event to analytics_events collection
     await addDoc(collection(db, 'analytics_events'), {
       visitorId: vid,
       path: path || '/',
       deviceType: device,
       browser,
-      referrer: referrer || 'Direct',
+      referrer,
       createdAt: serverTimestamp(),
       dateStr: todayStr,
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
-    // Fail silently so visitor experience is unaffected
-    console.debug('Analytics log skipped:', err);
+    console.debug('Analytics log error:', err);
   }
 }
 

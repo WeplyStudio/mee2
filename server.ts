@@ -95,6 +95,97 @@ function sanitizeHtml(str: string): string {
 }
 
 /**
+ * Server-side Traffic Logger to Firestore
+ * Records all requests, curl, python, selenium, bots, crawlers, and HTTP visitors
+ */
+async function recordServerTrafficEvent(params: {
+  path: string;
+  clientIp?: string;
+  userAgent?: string;
+  referrer?: string;
+  visitorId?: string;
+}) {
+  try {
+    const projectId = 'metal-facet-38gvj';
+    const databaseId = 'ai-studio-jayss-ab416bf9-58b7-4e49-ba8f-65a95c1c9373';
+    const apiKey = 'AIzaSyAAD7RAXntHQQkNQZv9qc8XkZci0GMuVXg';
+    const nowIso = new Date().toISOString();
+    const dateStr = nowIso.split('T')[0];
+
+    const ua = params.userAgent || '';
+    let browser = 'Other / Web Client';
+    if (ua.includes('Selenium') || ua.includes('WebDriver')) browser = 'Selenium/WebDriver';
+    else if (ua.includes('HeadlessChrome') || ua.includes('Puppeteer') || ua.includes('Playwright')) browser = 'Headless/Automation';
+    else if (ua.includes('python')) browser = 'Python/Script';
+    else if (ua.includes('curl')) browser = 'cURL/Request';
+    else if (ua.includes('Postman')) browser = 'Postman';
+    else if (ua.includes('Chrome')) browser = 'Chrome';
+    else if (ua.includes('Safari')) browser = 'Safari';
+    else if (ua.includes('Firefox')) browser = 'Firefox';
+    else if (ua.includes('Edge')) browser = 'Edge';
+
+    let deviceType = 'desktop';
+    if (/tablet|ipad|playbook|silk/i.test(ua)) deviceType = 'tablet';
+    else if (/mobile|iphone|ipod|android/i.test(ua)) deviceType = 'mobile';
+
+    // Generate visitor ID if not provided
+    let vid = params.visitorId;
+    if (!vid) {
+      const vidSeed = (params.clientIp || '') + (params.userAgent || '');
+      let hash = 0;
+      for (let i = 0; i < vidSeed.length; i++) {
+        hash = (hash << 5) - hash + vidSeed.charCodeAt(i);
+        hash |= 0;
+      }
+      vid = 'req_' + Math.abs(hash).toString(36) + '_' + (params.clientIp || 'client').replace(/[^a-zA-Z0-9]/g, '').slice(-6);
+    }
+
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${databaseId}/documents/analytics_events?key=${apiKey}`;
+
+    const body = {
+      fields: {
+        visitorId: { stringValue: vid },
+        path: { stringValue: params.path || '/' },
+        deviceType: { stringValue: deviceType },
+        browser: { stringValue: browser },
+        referrer: { stringValue: params.referrer || 'Direct' },
+        timestamp: { stringValue: nowIso },
+        dateStr: { stringValue: dateStr },
+      },
+    };
+
+    await fetch(firestoreUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.debug('[Analytics Server] Record error:', err);
+  }
+}
+
+/**
+ * Endpoint to explicitly record any external request / selenium / script visitor
+ */
+app.all('/api/track-visit', async (req: Request, res: Response) => {
+  const reqPath = (req.query.path || req.body?.path || '/') as string;
+  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+  const userAgent = (req.query.userAgent || req.body?.userAgent || req.get('user-agent') || 'custom-request') as string;
+  const referrer = (req.query.referrer || req.body?.referrer || req.get('referrer') || 'Direct') as string;
+  const visitorId = (req.query.visitorId || req.body?.visitorId) as string | undefined;
+
+  recordServerTrafficEvent({
+    path: reqPath,
+    clientIp,
+    userAgent,
+    referrer,
+    visitorId,
+  });
+
+  res.json({ ok: true, message: 'Visit recorded to Firestore database', path: reqPath });
+});
+
+/**
  * Health check endpoint
  */
 app.get('/api/health', (req: Request, res: Response) => {
@@ -313,6 +404,20 @@ async function startServer() {
       })
     );
     app.get('*', (req: Request, res: Response) => {
+      const ua = req.get('user-agent') || '';
+      // Auto-record direct HTTP scripts/curl/bots that do not execute client-side JS
+      const isScriptOrBot = /curl|python|wget|postman|axios|httpclient|bot|crawl|spider/i.test(ua);
+      if (isScriptOrBot && !req.path.includes('.')) {
+        const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+        const referrer = req.get('referrer') || 'Direct';
+        recordServerTrafficEvent({
+          path: req.path || '/',
+          clientIp,
+          userAgent: ua,
+          referrer,
+        });
+      }
+
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       if (cachedIndexHtml) {
