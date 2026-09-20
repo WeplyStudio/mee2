@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import {
   fetchAnalyticsMetrics,
+  subscribeToAnalytics,
   fetchRecentVisitorLogs,
   pruneOldTrafficLogs,
   fetchProjectsFromFirestore,
@@ -225,15 +226,32 @@ export const AdminDashboard: React.FC<Props> = ({
     setPasswordInput('');
   };
 
-  // Load Data When Authenticated
+  // Load Data When Authenticated & Subscribe to Real-Time Analytics
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    loadAnalytics();
     loadProjects();
     loadSiteImages();
     loadTeamData();
     loadReminderData();
+
+    // Initial load
+    loadAnalytics();
+
+    // Subscribe to live real-time traffic updates from Firestore
+    const unsubscribeAnalytics = subscribeToAnalytics(
+      (metrics) => {
+        setAnalytics(metrics);
+        setIsLoadingAnalytics(false);
+      },
+      (logs) => {
+        setRecentLogs(logs);
+      }
+    );
+
+    return () => {
+      unsubscribeAnalytics();
+    };
   }, [isAuthenticated]);
 
   const loadTeamData = async () => {

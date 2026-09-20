@@ -12,7 +12,8 @@ import {
   limit,
   addDoc,
   serverTimestamp,
-  getDocFromServer
+  getDocFromServer,
+  onSnapshot
 } from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 import { Project } from '../types';
@@ -249,126 +250,138 @@ export async function pruneOldTrafficLogs(): Promise<number> {
 }
 
 /**
+ * Extract millisecond timestamp accurately from doc data
+ */
+function extractDocTimestamp(data: Record<string, any>): number {
+  if (data.timestamp) {
+    const parsed = new Date(data.timestamp).getTime();
+    if (!isNaN(parsed)) return parsed;
+  }
+  if (data.createdAt) {
+    if (typeof data.createdAt.toMillis === 'function') return data.createdAt.toMillis();
+    if (typeof data.createdAt.toDate === 'function') return data.createdAt.toDate().getTime();
+    if (typeof data.createdAt.seconds === 'number') return data.createdAt.seconds * 1000;
+    if (typeof data.createdAt === 'string') {
+      const parsed = new Date(data.createdAt).getTime();
+      if (!isNaN(parsed)) return parsed;
+    }
+  }
+  if (data.dateStr) {
+    const parsed = new Date(data.dateStr).getTime();
+    if (!isNaN(parsed)) return parsed;
+  }
+  return Date.now();
+}
+
+/**
+ * Compute Visitor Analytics from Firestore Document snapshots
+ */
+export function computeAnalyticsFromDocs(docs: any[]): VisitorAnalyticsSummary {
+  const nowMs = Date.now();
+  const ms30Min = 30 * 60 * 1000;
+  const ms1Day = 24 * 60 * 60 * 1000;
+  const ms30Days = 30 * 24 * 60 * 60 * 1000;
+  const ms90Days = 90 * 24 * 60 * 60 * 1000;
+
+  let traffic30Min = 0;
+  let traffic1Day = 0;
+  let traffic30Days = 0;
+  let traffic90Days = 0;
+
+  const uniqueVisitors = new Set<string>();
+  const pageCounts: Record<string, number> = {};
+  const referrers: Record<string, number> = {};
+  const dailyMap: Record<string, { visits: number; uniqueSet: Set<string> }> = {};
+
+  let mobileCount = 0;
+  let desktopCount = 0;
+  let tabletCount = 0;
+
+  // Initialize last 14 days in dailyMap
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(nowMs - i * 24 * 60 * 60 * 1000);
+    const ds = d.toISOString().split('T')[0];
+    dailyMap[ds] = { visits: 0, uniqueSet: new Set() };
+  }
+
+  docs.forEach((docSnap) => {
+    const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap;
+    const vid = data.visitorId || (docSnap.id ? docSnap.id : 'anon');
+    uniqueVisitors.add(vid);
+
+    const eventTime = extractDocTimestamp(data);
+    const ageMs = Math.max(0, nowMs - eventTime);
+
+    // Calculate time windows based on actual time elapsed
+    if (ageMs <= ms30Min) traffic30Min++;
+    if (ageMs <= ms1Day) traffic1Day++;
+    if (ageMs <= ms30Days) traffic30Days++;
+    if (ageMs <= ms90Days) traffic90Days++;
+
+    const path = data.path || '/';
+    pageCounts[path] = (pageCounts[path] || 0) + 1;
+
+    const ref = data.referrer || 'Direct';
+    referrers[ref] = (referrers[ref] || 0) + 1;
+
+    if (data.deviceType === 'mobile') mobileCount++;
+    else if (data.deviceType === 'tablet') tabletCount++;
+    else desktopCount++;
+
+    const itemDate = data.dateStr || new Date(eventTime).toISOString().split('T')[0];
+    if (dailyMap[itemDate]) {
+      dailyMap[itemDate].visits++;
+      dailyMap[itemDate].uniqueSet.add(vid);
+    }
+  });
+
+  const totalEvents = docs.length;
+
+  const topPagesArray: TopPageEntry[] = Object.entries(pageCounts)
+    .map(([path, visits]) => ({
+      path,
+      visits,
+      percentage: totalEvents > 0 ? Math.round((visits / totalEvents) * 100) : 0,
+    }))
+    .sort((a, b) => b.visits - a.visits);
+
+  const dailyTrend = Object.keys(dailyMap)
+    .sort()
+    .map((date) => ({
+      date: date.slice(5), // MM-DD
+      visits: dailyMap[date].visits,
+      unique: dailyMap[date].uniqueSet.size,
+    }));
+
+  return {
+    totalVisits: totalEvents,
+    totalUniqueVisitors: uniqueVisitors.size,
+    uniqueVisitors: uniqueVisitors.size,
+    traffic30Min,
+    traffic1Day,
+    traffic30Days,
+    traffic90Days,
+    topPages: topPagesArray,
+    referrers,
+    deviceBreakdown: {
+      mobile: mobileCount,
+      desktop: desktopCount,
+      tablet: tabletCount,
+    },
+    dailyTrend,
+    lastPrunedCount: 0,
+  };
+}
+
+/**
  * Fetch Analytics Summary & Metrics for the Admin Dashboard
  */
 export async function fetchAnalyticsMetrics(): Promise<VisitorAnalyticsSummary> {
-  // Trigger background pruning of logs older than 90 days
-  let prunedCount = 0;
-  try {
-    prunedCount = await pruneOldTrafficLogs();
-  } catch {
-    // Ignore error
-  }
-
   try {
     const eventsRef = collection(db, 'analytics_events');
-    const q = query(eventsRef, orderBy('createdAt', 'desc'), limit(1500));
+    const q = query(eventsRef, limit(2000));
     const snapshot = await getDocs(q);
-
-    const nowMs = Date.now();
-    const ms30Min = 30 * 60 * 1000;
-    const ms1Day = 24 * 60 * 60 * 1000;
-    const ms30Days = 30 * 24 * 60 * 60 * 1000;
-    const ms90Days = 90 * 24 * 60 * 60 * 1000;
-
-    let traffic30Min = 0;
-    let traffic1Day = 0;
-    let traffic30Days = 0;
-    let traffic90Days = 0;
-
-    const uniqueVisitors = new Set<string>();
-    const pageCounts: Record<string, number> = {};
-    const referrers: Record<string, number> = {};
-    const dailyMap: Record<string, { visits: number; uniqueSet: Set<string> }> = {};
-
-    let mobileCount = 0;
-    let desktopCount = 0;
-    let tabletCount = 0;
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    // Seed last 14 days in dailyMap
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const ds = d.toISOString().split('T')[0];
-      dailyMap[ds] = { visits: 0, uniqueSet: new Set() };
-    }
-
-    snapshot.docs.forEach((docSnap) => {
-      const data = docSnap.data();
-      const vid = data.visitorId || docSnap.id;
-      uniqueVisitors.add(vid);
-
-      let eventTime = nowMs;
-      if (data.timestamp) {
-        const parsed = new Date(data.timestamp).getTime();
-        if (!isNaN(parsed)) eventTime = parsed;
-      } else if (data.createdAt && typeof data.createdAt.toMillis === 'function') {
-        eventTime = data.createdAt.toMillis();
-      }
-
-      const ageMs = nowMs - eventTime;
-
-      // Filter time windows
-      if (ageMs <= ms30Min) traffic30Min++;
-      if (ageMs <= ms1Day) traffic1Day++;
-      if (ageMs <= ms30Days) traffic30Days++;
-      if (ageMs <= ms90Days) traffic90Days++;
-
-      const path = data.path || '/';
-      pageCounts[path] = (pageCounts[path] || 0) + 1;
-
-      const ref = data.referrer || 'Direct';
-      referrers[ref] = (referrers[ref] || 0) + 1;
-
-      if (data.deviceType === 'mobile') mobileCount++;
-      else if (data.deviceType === 'tablet') tabletCount++;
-      else desktopCount++;
-
-      const itemDate = data.dateStr || (data.timestamp ? data.timestamp.split('T')[0] : todayStr);
-      if (dailyMap[itemDate]) {
-        dailyMap[itemDate].visits++;
-        dailyMap[itemDate].uniqueSet.add(vid);
-      }
-    });
-
-    const totalEvents = snapshot.docs.length;
-
-    // Calculate Top Pages with percentages based strictly on real events
-    const topPagesArray: TopPageEntry[] = Object.entries(pageCounts)
-      .map(([path, visits]) => ({
-        path,
-        visits,
-        percentage: totalEvents > 0 ? Math.round((visits / totalEvents) * 100) : 0,
-      }))
-      .sort((a, b) => b.visits - a.visits);
-
-    const dailyTrend = Object.keys(dailyMap)
-      .sort()
-      .map((date) => ({
-        date: date.slice(5), // MM-DD
-        visits: dailyMap[date].visits,
-        unique: dailyMap[date].uniqueSet.size,
-      }));
-
-    return {
-      totalVisits: totalEvents,
-      totalUniqueVisitors: uniqueVisitors.size,
-      uniqueVisitors: uniqueVisitors.size,
-      traffic30Min,
-      traffic1Day,
-      traffic30Days,
-      traffic90Days,
-      topPages: topPagesArray,
-      referrers,
-      deviceBreakdown: {
-        mobile: mobileCount,
-        desktop: desktopCount,
-        tablet: tabletCount,
-      },
-      dailyTrend,
-      lastPrunedCount: prunedCount,
-    };
+    return computeAnalyticsFromDocs(snapshot.docs);
   } catch (error) {
     console.error('Error fetching analytics metrics:', error);
     return {
@@ -389,15 +402,71 @@ export async function fetchAnalyticsMetrics(): Promise<VisitorAnalyticsSummary> 
 }
 
 /**
+ * Real-time subscription to analytics events for live dashboard telemetry
+ */
+export function subscribeToAnalytics(
+  onMetrics: (metrics: VisitorAnalyticsSummary) => void,
+  onRecentLogs?: (logs: VisitorLogEntry[]) => void
+): () => void {
+  try {
+    const eventsRef = collection(db, 'analytics_events');
+    const q = query(eventsRef, limit(2000));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const metrics = computeAnalyticsFromDocs(snapshot.docs);
+        onMetrics(metrics);
+
+        if (onRecentLogs) {
+          // Sort recent logs by timestamp desc
+          const sortedDocs = [...snapshot.docs].sort((a, b) => {
+            const timeA = extractDocTimestamp(a.data());
+            const timeB = extractDocTimestamp(b.data());
+            return timeB - timeA;
+          });
+
+          const logs: VisitorLogEntry[] = sortedDocs.slice(0, 25).map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              visitorId: data.visitorId || 'anon',
+              path: data.path || '/',
+              deviceType: data.deviceType || 'desktop',
+              browser: data.browser || 'Unknown',
+              referrer: data.referrer || 'Direct',
+              timestamp: data.timestamp || (data.createdAt?.toMillis ? new Date(data.createdAt.toMillis()).toISOString() : new Date().toISOString()),
+            };
+          });
+          onRecentLogs(logs);
+        }
+      },
+      (error) => {
+        console.error('Real-time analytics subscription error:', error);
+      }
+    );
+    return unsubscribe;
+  } catch (err) {
+    console.error('Failed to subscribe to analytics:', err);
+    return () => {};
+  }
+}
+
+/**
  * Fetch Recent Visitor Activity Logs
  */
 export async function fetchRecentVisitorLogs(limitCount = 20): Promise<VisitorLogEntry[]> {
   try {
     const eventsRef = collection(db, 'analytics_events');
-    const q = query(eventsRef, orderBy('createdAt', 'desc'), limit(limitCount));
+    const q = query(eventsRef, limit(limitCount * 2));
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((d) => {
+    const sortedDocs = [...snapshot.docs].sort((a, b) => {
+      const timeA = extractDocTimestamp(a.data());
+      const timeB = extractDocTimestamp(b.data());
+      return timeB - timeA;
+    });
+
+    return sortedDocs.slice(0, limitCount).map((d) => {
       const data = d.data();
       return {
         id: d.id,
