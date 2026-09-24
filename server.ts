@@ -489,7 +489,7 @@ app.get('/api/analytics/metrics', (req: Request, res: Response) => {
 });
 
 app.get('/api/analytics/recent', (req: Request, res: Response) => {
-  const limitCount = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 10000);
+  const limitCount = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 100000);
   const events = queryAll<{
     id: string;
     visitorId: string;
