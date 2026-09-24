@@ -4,6 +4,8 @@
  * Fallback: Direct API failover to ensure 100% delivery even on static previews or network glitches.
  */
 
+const CF_WORKER_URL = 'https://hello-world-sparkling-meadow-630c.matchboxdevelopment.workers.dev';
+
 export interface ContactMessagePayload {
   name: string;
   email: string;
@@ -45,44 +47,51 @@ export async function sendTelegramNotification(
     return { success: true };
   }
 
-  // 1. Try Primary Server Proxy (/api/contact)
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+  // 1. Try Primary Server Proxy (/api/contact or Cloudflare Worker)
+  const contactUrls = [
+    `${CF_WORKER_URL}/api/contact`,
+    '/api/contact'
+  ];
 
-    const response = await fetch('/api/contact', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        name: payload.name,
-        email: payload.email,
-        message: payload.message,
-        company: payload.company,
-        phone: payload.phone,
-        subject: payload.subject,
-        source: payload.source || 'Portfolio Website',
-        honeypot: payload.honeypot || '',
-        formLoadTime: payload.formLoadTime || Date.now(),
-      }),
-    });
+  for (const url of contactUrls) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-    clearTimeout(timeoutId);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          name: payload.name,
+          email: payload.email,
+          message: payload.message,
+          company: payload.company,
+          phone: payload.phone,
+          subject: payload.subject,
+          source: payload.source || 'Portfolio Website',
+          honeypot: payload.honeypot || '',
+          formLoadTime: payload.formLoadTime || Date.now(),
+        }),
+      });
 
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
-      if (data && data.ok) {
-        return { success: true };
+      clearTimeout(timeoutId);
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        if (data && data.ok) {
+          return { success: true };
+        }
+        if (data && data.error && !data.error.includes('server')) {
+          return { success: false, error: data.error };
+        }
       }
-      if (data && data.error && !data.error.includes('server')) {
-        return { success: false, error: data.error };
-      }
+    } catch {
+      // Try next URL in list or fall over
     }
-  } catch {
-    // Failover to secondary direct dispatch
   }
 
   // 2. Secondary Direct Failover Dispatch

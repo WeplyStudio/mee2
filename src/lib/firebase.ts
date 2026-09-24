@@ -5,6 +5,8 @@
 
 import { Project } from '../types';
 
+export const CF_WORKER_URL = 'https://hello-world-sparkling-meadow-630c.matchboxdevelopment.workers.dev';
+
 export interface SiteImageSettings {
   heroImage?: string;
   aboutImage?: string;
@@ -67,12 +69,50 @@ export interface VisitorLogEntry {
   timestamp: string;
 }
 
+function getApiUrl(endpoint: string): string {
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
+  const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_API_URL : undefined;
+  const baseUrl = metaEnv || CF_WORKER_URL;
+  const cleanBase = baseUrl.replace(/\/+$/, '');
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `${cleanBase}${cleanEndpoint}`;
+}
+
+async function apiFetch(endpoint: string, options?: RequestInit): Promise<Response> {
+  const targetUrl = getApiUrl(endpoint);
+
+  try {
+    const res = await fetch(targetUrl, options);
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && (contentType.includes('application/json') || contentType.includes('text/plain'))) {
+      return res;
+    }
+  } catch (err) {
+    console.debug(`[apiFetch] Primary fetch failed for ${targetUrl}:`, err);
+  }
+
+  // Fallback to relative endpoint if primary worker URL failed
+  if (!endpoint.startsWith('http')) {
+    try {
+      const relRes = await fetch(endpoint, options);
+      const contentType = relRes.headers.get('content-type') || '';
+      if (relRes.ok && (contentType.includes('application/json') || contentType.includes('text/plain'))) {
+        return relRes;
+      }
+    } catch {}
+  }
+
+  return fetch(targetUrl, options);
+}
+
 /**
  * Test D1 Connection on Boot
  */
 export async function testConnection(): Promise<boolean> {
   try {
-    const res = await fetch('/api/health');
+    const res = await apiFetch('/api/health');
     return res.ok;
   } catch {
     return true;
@@ -145,7 +185,7 @@ export async function logVisitorPageView(path: string): Promise<void> {
       referrer = 'Direct';
     }
 
-    fetch('/api/analytics/log', {
+    apiFetch('/api/analytics/log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -171,7 +211,7 @@ export async function getAnalyticsMeta(): Promise<{
   lastPrunedCount?: number;
 }> {
   try {
-    const res = await fetch('/api/analytics/metrics');
+    const res = await apiFetch('/api/analytics/metrics');
     if (res.ok) {
       const data = await res.json();
       return {
@@ -192,7 +232,7 @@ export async function getAnalyticsMeta(): Promise<{
  */
 export async function pruneOld10DayTrafficLogs(): Promise<{ deletedCount: number; newTotalLifetimeVisits: number; message?: string }> {
   try {
-    const res = await fetch('/api/analytics/prune', { method: 'POST' });
+    const res = await apiFetch('/api/analytics/prune', { method: 'POST' });
     if (res.ok) {
       const data = await res.json();
       return {
@@ -217,7 +257,7 @@ export async function pruneOldTrafficLogs(): Promise<number> {
  */
 export async function fetchAnalyticsMetrics(): Promise<VisitorAnalyticsSummary> {
   try {
-    const res = await fetch('/api/analytics/metrics');
+    const res = await apiFetch('/api/analytics/metrics');
     if (res.ok) {
       const metrics = await res.json();
       return metrics as VisitorAnalyticsSummary;
@@ -282,7 +322,7 @@ export function subscribeToAnalytics(
  */
 export async function fetchRecentVisitorLogs(limitCount = 100): Promise<VisitorLogEntry[]> {
   try {
-    const res = await fetch(`/api/analytics/recent?limit=${limitCount}`);
+    const res = await apiFetch(`/api/analytics/recent?limit=${limitCount}`);
     if (res.ok) {
       const data = await res.json();
       if (data.logs) return data.logs;
@@ -298,7 +338,7 @@ export async function fetchRecentVisitorLogs(limitCount = 100): Promise<VisitorL
  */
 export async function fetchTeamMembers(): Promise<TeamMember[]> {
   try {
-    const res = await fetch('/api/team');
+    const res = await apiFetch('/api/team');
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data.members) && data.members.length > 0) {
@@ -317,7 +357,7 @@ export async function fetchTeamMembers(): Promise<TeamMember[]> {
 export async function saveTeamMember(member: Partial<TeamMember> & { name: string; role: string }): Promise<string> {
   const memberId = member.id || 'member_' + Date.now().toString(36);
   try {
-    await fetch('/api/team', {
+    await apiFetch('/api/team', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -336,7 +376,7 @@ export async function saveTeamMember(member: Partial<TeamMember> & { name: strin
  */
 export async function deleteTeamMember(memberId: string): Promise<void> {
   try {
-    await fetch(`/api/team/${memberId}`, { method: 'DELETE' });
+    await apiFetch(`/api/team/${memberId}`, { method: 'DELETE' });
   } catch (e) {
     console.debug('Delete team member error:', e);
   }
@@ -347,7 +387,7 @@ export async function deleteTeamMember(memberId: string): Promise<void> {
  */
 export async function fetchDashboardReminder(): Promise<DashboardReminder | null> {
   try {
-    const res = await fetch('/api/reminder');
+    const res = await apiFetch('/api/reminder');
     if (res.ok) {
       const data = await res.json();
       if (data.reminder) return data.reminder as DashboardReminder;
@@ -379,7 +419,7 @@ export async function saveDashboardReminder(reminder: Partial<DashboardReminder>
   } catch {}
 
   try {
-    await fetch('/api/reminder', {
+    await apiFetch('/api/reminder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(reminderData),
@@ -394,7 +434,7 @@ export async function saveDashboardReminder(reminder: Partial<DashboardReminder>
  */
 export async function fetchProjectsFromFirestore(): Promise<Project[]> {
   try {
-    const res = await fetch('/api/projects');
+    const res = await apiFetch('/api/projects');
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data.projects) && data.projects.length > 0) {
@@ -412,7 +452,7 @@ export async function fetchProjectsFromFirestore(): Promise<Project[]> {
  */
 export async function saveProjectToFirestore(project: Partial<Project> & { id: string }): Promise<void> {
   try {
-    await fetch('/api/projects', {
+    await apiFetch('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(project),
@@ -427,7 +467,7 @@ export async function saveProjectToFirestore(project: Partial<Project> & { id: s
  */
 export async function deleteProjectFromFirestore(projectId: string): Promise<void> {
   try {
-    await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
+    await apiFetch(`/api/projects/${projectId}`, { method: 'DELETE' });
   } catch (err) {
     console.debug('Error deleting project from D1 SQLite:', err);
   }
@@ -438,7 +478,7 @@ export async function deleteProjectFromFirestore(projectId: string): Promise<voi
  */
 export async function fetchSiteSettings(): Promise<SiteImageSettings | null> {
   try {
-    const res = await fetch('/api/settings');
+    const res = await apiFetch('/api/settings');
     if (res.ok) {
       const data = await res.json();
       if (data.settings) return data.settings as SiteImageSettings;
@@ -454,7 +494,7 @@ export async function fetchSiteSettings(): Promise<SiteImageSettings | null> {
  */
 export async function saveSiteSettings(settings: Partial<SiteImageSettings>): Promise<void> {
   try {
-    await fetch('/api/settings', {
+    await apiFetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings),
