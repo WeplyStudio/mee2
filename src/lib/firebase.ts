@@ -81,27 +81,31 @@ function getApiUrl(endpoint: string): string {
 }
 
 async function apiFetch(endpoint: string, options?: RequestInit): Promise<Response> {
-  const targetUrl = getApiUrl(endpoint);
-
-  try {
-    const res = await fetch(targetUrl, options);
-    const contentType = res.headers.get('content-type') || '';
-    if (res.ok && (contentType.includes('application/json') || contentType.includes('text/plain'))) {
-      return res;
-    }
-  } catch (err) {
-    console.debug(`[apiFetch] Primary fetch failed for ${targetUrl}:`, err);
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return fetch(endpoint, options);
   }
 
-  // Fallback to relative endpoint if primary worker URL failed
-  if (!endpoint.startsWith('http')) {
-    try {
-      const relRes = await fetch(endpoint, options);
-      const contentType = relRes.headers.get('content-type') || '';
-      if (relRes.ok && (contentType.includes('application/json') || contentType.includes('text/plain'))) {
-        return relRes;
-      }
-    } catch {}
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  // 1. Try relative endpoint first (Local Express Server / Reverse Proxy)
+  try {
+    const relRes = await fetch(cleanEndpoint, options);
+    const contentType = relRes.headers.get('content-type') || '';
+    if (relRes.ok && (contentType.includes('application/json') || contentType.includes('text/plain'))) {
+      return relRes;
+    }
+  } catch {}
+
+  // 2. Fallback to primary Cloudflare Worker URL
+  const targetUrl = getApiUrl(cleanEndpoint);
+  try {
+    const workerRes = await fetch(targetUrl, options);
+    const contentType = workerRes.headers.get('content-type') || '';
+    if (workerRes.ok && (contentType.includes('application/json') || contentType.includes('text/plain'))) {
+      return workerRes;
+    }
+  } catch (err) {
+    console.debug(`[apiFetch] Primary worker fetch failed for ${targetUrl}:`, err);
   }
 
   return fetch(targetUrl, options);
@@ -256,15 +260,33 @@ export async function pruneOldTrafficLogs(): Promise<number> {
  * Fetch Analytics Summary & Metrics from Cloudflare D1 SQL DB
  */
 export async function fetchAnalyticsMetrics(): Promise<VisitorAnalyticsSummary> {
+  const CACHE_KEY = 'jason_portfolio_analytics_cache';
   try {
     const res = await apiFetch('/api/analytics/metrics');
     if (res.ok) {
       const metrics = await res.json();
-      return metrics as VisitorAnalyticsSummary;
+      if (metrics && typeof metrics.totalLifetimeVisits === 'number' && metrics.totalLifetimeVisits >= 0) {
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(metrics));
+        } catch {}
+        return metrics as VisitorAnalyticsSummary;
+      }
     }
   } catch (error) {
     console.error('Error fetching Cloudflare D1 analytics metrics:', error);
   }
+
+  // Fallback to cached metrics if server is temporarily unreachable/restarting
+  try {
+    const cached = typeof window !== 'undefined' ? localStorage.getItem(CACHE_KEY) : null;
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && typeof parsed.totalLifetimeVisits === 'number') {
+        return parsed as VisitorAnalyticsSummary;
+      }
+    }
+  } catch {}
+
   return {
     totalVisits: 0,
     totalLifetimeVisits: 0,

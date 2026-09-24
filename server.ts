@@ -52,6 +52,7 @@ app.set('trust proxy', true);
 // ==========================================
 const DB_PATH = path.join(process.cwd(), 'd1_database.sqlite');
 let db: Database | null = null;
+let dbInitPromise: Promise<void> | null = null;
 
 async function initSqliteDb() {
   try {
@@ -80,9 +81,9 @@ async function initSqliteDb() {
         id TEXT PRIMARY KEY,
         visitorId TEXT NOT NULL,
         path TEXT NOT NULL,
-        deviceType TEXT DEFAULT 'desktop',
-        browser TEXT DEFAULT 'Unknown',
-        referrer TEXT DEFAULT 'Direct',
+        deviceType DEFAULT 'desktop',
+        browser DEFAULT 'Unknown',
+        referrer DEFAULT 'Direct',
         dateStr TEXT,
         timestamp TEXT NOT NULL
       );
@@ -148,10 +149,22 @@ async function initSqliteDb() {
       );
     `);
 
-    // Ensure analytics_meta row exists
-    const metaCheck = db.exec("SELECT id FROM analytics_meta WHERE id = 'lifetime'");
+    // Ensure analytics_meta row exists without resetting existing counts
+    const metaCheck = db.exec("SELECT totalLifetimeVisits FROM analytics_meta WHERE id = 'lifetime'");
     if (metaCheck.length === 0 || metaCheck[0].values.length === 0) {
-      db.run("INSERT INTO analytics_meta (id, archivedVisits, totalLifetimeVisits) VALUES ('lifetime', 0, 0)");
+      let existingCount = 0;
+      try {
+        const evts = db.exec("SELECT COUNT(*) FROM analytics_events");
+        if (evts.length > 0 && evts[0].values.length > 0) {
+          existingCount = Math.max(existingCount, Number(evts[0].values[0][0]) || 0);
+        }
+        const logs = db.exec("SELECT COUNT(*) FROM visitor_logs");
+        if (logs.length > 0 && logs[0].values.length > 0) {
+          existingCount = Math.max(existingCount, Number(logs[0].values[0][0]) || 0);
+        }
+      } catch {}
+      db.run("INSERT INTO analytics_meta (id, archivedVisits, totalLifetimeVisits) VALUES ('lifetime', 0, ?)", [existingCount]);
+      db.run("INSERT OR IGNORE INTO lifetime_stats (id, archivedVisits, totalLifetimeVisits) VALUES ('lifetime', 0, ?)", [existingCount]);
     }
 
     saveSqliteDb();
@@ -205,8 +218,14 @@ function runSql(sql: string, params: any[] = []): void {
   }
 }
 
-// Initialize SQLite DB
-initSqliteDb();
+// Start async initialization of SQLite DB
+dbInitPromise = initSqliteDb();
+
+// Middleware to ensure DB is initialized before handling requests
+app.use(async (req, res, next) => {
+  if (dbInitPromise) await dbInitPromise;
+  next();
+});
 
 // Server-side ONLY secrets
 const ACTIVE_TELEGRAM_BOT_TOKEN = '8459837666:AAHY7tsADTJ9jvpDYfXKQXXvog3Cwo4Mwf0';
@@ -745,6 +764,10 @@ ${sanitizeHtml(message)}
 
 // Start Express Server
 async function startServer() {
+  if (dbInitPromise) {
+    await dbInitPromise;
+  }
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
