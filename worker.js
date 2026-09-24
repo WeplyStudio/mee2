@@ -106,6 +106,65 @@ export default {
 
     const path = url.pathname;
 
+    // Automatic traffic recording for Cloudflare Worker requests
+    const isStaticAsset = path.match(/\.(js|css|webp|jpeg|jpg|png|svg|woff2?|ttf|eot|ico|map|json)$/i);
+    const isAnalyticsReadOrExplicitLog =
+      path === '/api/analytics/metrics' ||
+      path === '/api/analytics/recent' ||
+      path === '/api/analytics/log' ||
+      path === '/api/track-visit';
+
+    if (!isStaticAsset && !isAnalyticsReadOrExplicitLog) {
+      const userAgent = request.headers.get('user-agent') || 'custom-worker-fetch';
+      const clientIp = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || 'unknown';
+      const referrer = request.headers.get('referer') || 'Direct';
+      const lowerUa = userAgent.toLowerCase();
+
+      let browser = 'Other / Web Client';
+      if (userAgent.includes('Selenium') || userAgent.includes('WebDriver')) browser = 'Selenium / WebDriver';
+      else if (userAgent.includes('HeadlessChrome') || userAgent.includes('Puppeteer') || userAgent.includes('Playwright')) browser = 'Headless / Automation';
+      else if (lowerUa.includes('python')) browser = 'Python / Script';
+      else if (lowerUa.includes('curl')) browser = 'cURL / Script';
+      else if (lowerUa.includes('postman')) browser = 'Postman / Script';
+      else if (lowerUa.includes('axios') || lowerUa.includes('node-fetch') || lowerUa.includes('wget') || lowerUa.includes('httpclient') || lowerUa.includes('go-http-client')) browser = 'HTTP Fetch / Script';
+      else if (userAgent.includes('Chrome')) browser = 'Chrome';
+      else if (userAgent.includes('Safari')) browser = 'Safari';
+      else if (userAgent.includes('Firefox')) browser = 'Firefox';
+      else if (userAgent.includes('Edge')) browser = 'Edge';
+      else if (userAgent) browser = userAgent.slice(0, 30);
+
+      let deviceType = 'desktop';
+      if (/tablet|ipad|playbook|silk/i.test(userAgent)) deviceType = 'tablet';
+      else if (/mobile|iphone|ipod|android/i.test(userAgent)) deviceType = 'mobile';
+
+      const vidSeed = clientIp + userAgent;
+      let hash = 0;
+      for (let i = 0; i < vidSeed.length; i++) {
+        hash = (hash << 5) - hash + vidSeed.charCodeAt(i);
+        hash |= 0;
+      }
+      const vid = 'req_' + Math.abs(hash).toString(36) + '_' + clientIp.replace(/[^a-zA-Z0-9]/g, '').slice(-6);
+
+      const nowIso = new Date().toISOString();
+      const dateStr = nowIso.split('T')[0];
+      const evtId = 'evt_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
+
+      ctx.waitUntil(
+        env.DB.batch([
+          env.DB.prepare(
+            'INSERT INTO analytics_events (id, visitorId, path, deviceType, browser, referrer, dateStr, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+          ).bind(evtId, vid, path, deviceType, browser, referrer, dateStr, nowIso),
+          env.DB.prepare(
+            'INSERT INTO visitor_logs (id, visitorId, path, deviceType, browser, referrer, dateStr, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+          ).bind(evtId, vid, path, deviceType, browser, referrer, dateStr, nowIso),
+          env.DB.prepare("UPDATE analytics_meta SET totalLifetimeVisits = totalLifetimeVisits + 1 WHERE id = 'lifetime'"),
+          env.DB.prepare(
+            "UPDATE lifetime_stats SET archivedVisits = COALESCE((SELECT archivedVisits FROM analytics_meta WHERE id = 'lifetime'), 0), totalLifetimeVisits = COALESCE((SELECT totalLifetimeVisits FROM analytics_meta WHERE id = 'lifetime'), 1), updatedAt = ? WHERE id = 'lifetime'"
+          ).bind(nowIso),
+        ]).catch((e) => console.error('Worker bg traffic record error:', e))
+      );
+    }
+
     // Health check endpoint
     if (path === '/api/health') {
       return jsonResponse(
@@ -260,34 +319,42 @@ export default {
 
     // Prune Logs Endpoint
     if (path === '/api/analytics/prune') {
-      const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
-      const cutoffIso = new Date(Date.now() - tenDaysMs).toISOString();
+      const countRes = await env.DB.prepare('SELECT COUNT(*) as cnt FROM analytics_events').first();
+      const totalLogsCount = countRes?.cnt || 0;
+      const ONE_MILLION = 1000000;
 
-      const oldEvts = await env.DB.prepare('SELECT COUNT(*) as cnt FROM analytics_events WHERE timestamp < ?')
-        .bind(cutoffIso)
-        .first();
-      const countToPrune = oldEvts?.cnt || 0;
-
-      if (countToPrune > 0) {
+      if (totalLogsCount > ONE_MILLION) {
+        const excessToPrune = totalLogsCount - ONE_MILLION;
         await env.DB.batch([
-          env.DB.prepare('DELETE FROM analytics_events WHERE timestamp < ?').bind(cutoffIso),
-          env.DB.prepare('DELETE FROM visitor_logs WHERE timestamp < ?').bind(cutoffIso),
+          env.DB.prepare('DELETE FROM analytics_events WHERE id IN (SELECT id FROM analytics_events ORDER BY timestamp ASC LIMIT ?)').bind(excessToPrune),
+          env.DB.prepare('DELETE FROM visitor_logs WHERE id IN (SELECT id FROM visitor_logs ORDER BY timestamp ASC LIMIT ?)').bind(excessToPrune),
           env.DB.prepare(
             'UPDATE analytics_meta SET archivedVisits = archivedVisits + ?, lastPrunedAt = ?, lastPrunedCount = ? WHERE id = "lifetime"'
-          ).bind(countToPrune, new Date().toISOString(), countToPrune),
+          ).bind(excessToPrune, new Date().toISOString(), excessToPrune),
           env.DB.prepare(
             'UPDATE lifetime_stats SET archivedVisits = archivedVisits + ?, lastPrunedAt = ?, lastPrunedCount = ? WHERE id = "lifetime"'
-          ).bind(countToPrune, new Date().toISOString(), countToPrune),
+          ).bind(excessToPrune, new Date().toISOString(), excessToPrune),
         ]);
+
+        const metaRow = await env.DB.prepare("SELECT * FROM analytics_meta WHERE id = 'lifetime'").first();
+        return jsonResponse(
+          {
+            ok: true,
+            deletedCount: excessToPrune,
+            newTotalLifetimeVisits: metaRow?.totalLifetimeVisits || 0,
+            message: `Pembersihan Cloudflare Worker D1 sukses! ${excessToPrune} log visitor (>1 Juta) dipindahkan ke lifetime count.`,
+          },
+          corsHeaders
+        );
       }
 
       const metaRow = await env.DB.prepare("SELECT * FROM analytics_meta WHERE id = 'lifetime'").first();
       return jsonResponse(
         {
           ok: true,
-          deletedCount: countToPrune,
-          newTotalLifetimeVisits: metaRow?.totalLifetimeVisits || 0,
-          message: `Pembersihan Cloudflare Worker D1 sukses! ${countToPrune} list histori >10 hari dihapus.`,
+          deletedCount: 0,
+          newTotalLifetimeVisits: metaRow?.totalLifetimeVisits || totalLogsCount,
+          message: `Log visitor (${totalLogsCount} data) belum mencapai batas 1 Juta. Tidak ada data yang dihapus.`,
         },
         corsHeaders
       );

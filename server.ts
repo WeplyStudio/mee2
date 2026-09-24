@@ -227,6 +227,32 @@ app.use(async (req, res, next) => {
   next();
 });
 
+// Middleware to automatically record EVERY incoming traffic request (real users, script fetch, curl, python, bots, API calls)
+app.use((req: Request, res: Response, next) => {
+  // Exclude static assets (js, css, images, fonts, maps) to avoid counting asset files
+  const isStaticAsset = req.path.match(/\.(js|css|webp|jpeg|jpg|png|svg|woff2?|ttf|eot|ico|map|json)$/i);
+  // Exclude dashboard metric reads & explicit logs to avoid double-logging
+  const isAnalyticsReadOrExplicitLog =
+    req.path === '/api/analytics/metrics' ||
+    req.path === '/api/analytics/recent' ||
+    req.path === '/api/analytics/log' ||
+    req.path === '/api/track-visit';
+
+  if (!isStaticAsset && !isAnalyticsReadOrExplicitLog) {
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+    const userAgent = (req.get('user-agent') || 'custom-fetch-script') as string;
+    const referrer = (req.get('referrer') || 'Direct') as string;
+    const visitorId = (req.query.visitorId || req.body?.visitorId) as string | undefined;
+
+    try {
+      recordServerTrafficEvent({ path: req.path || '/', clientIp, userAgent, referrer, visitorId });
+    } catch (e) {
+      console.error('[Traffic Tracking Error]:', e);
+    }
+  }
+  next();
+});
+
 // Server-side ONLY secrets
 const ACTIVE_TELEGRAM_BOT_TOKEN = '8459837666:AAHY7tsADTJ9jvpDYfXKQXXvog3Cwo4Mwf0';
 const envToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
@@ -275,16 +301,20 @@ function recordServerTrafficEvent(params: {
 }) {
   const reqPath = params.path || '/';
   const ua = params.userAgent || '';
+  const lowerUa = ua.toLowerCase();
   let browser = 'Other / Web Client';
-  if (ua.includes('Selenium') || ua.includes('WebDriver')) browser = 'Selenium/WebDriver';
-  else if (ua.includes('HeadlessChrome') || ua.includes('Puppeteer') || ua.includes('Playwright')) browser = 'Headless/Automation';
-  else if (ua.includes('python')) browser = 'Python/Script';
-  else if (ua.includes('curl')) browser = 'cURL/Request';
-  else if (ua.includes('Postman')) browser = 'Postman';
+
+  if (ua.includes('Selenium') || ua.includes('WebDriver')) browser = 'Selenium / WebDriver';
+  else if (ua.includes('HeadlessChrome') || ua.includes('Puppeteer') || ua.includes('Playwright')) browser = 'Headless / Automation';
+  else if (lowerUa.includes('python')) browser = 'Python / Script';
+  else if (lowerUa.includes('curl')) browser = 'cURL / Script';
+  else if (lowerUa.includes('postman')) browser = 'Postman / Script';
+  else if (lowerUa.includes('axios') || lowerUa.includes('node-fetch') || lowerUa.includes('wget') || lowerUa.includes('httpclient') || lowerUa.includes('go-http-client')) browser = 'HTTP Fetch / Script';
   else if (ua.includes('Chrome')) browser = 'Chrome';
   else if (ua.includes('Safari')) browser = 'Safari';
   else if (ua.includes('Firefox')) browser = 'Firefox';
   else if (ua.includes('Edge')) browser = 'Edge';
+  else if (ua) browser = ua.slice(0, 30);
 
   let deviceType = 'desktop';
   if (/tablet|ipad|playbook|silk/i.test(ua)) deviceType = 'tablet';
@@ -317,7 +347,7 @@ function recordServerTrafficEvent(params: {
 
   // 2. Increment totalLifetimeVisits in analytics_meta and lifetime_stats in SQLite
   runSql(`UPDATE analytics_meta SET totalLifetimeVisits = totalLifetimeVisits + 1 WHERE id = 'lifetime'`);
-  runSql(`INSERT OR REPLACE INTO lifetime_stats (id, totalLifetimeVisits, updatedAt) VALUES ('lifetime', COALESCE((SELECT totalLifetimeVisits FROM analytics_meta WHERE id = 'lifetime'), 1), ?)`, [nowIso]);
+  runSql(`INSERT OR REPLACE INTO lifetime_stats (id, archivedVisits, totalLifetimeVisits, updatedAt) VALUES ('lifetime', COALESCE((SELECT archivedVisits FROM analytics_meta WHERE id = 'lifetime'), 0), COALESCE((SELECT totalLifetimeVisits FROM analytics_meta WHERE id = 'lifetime'), 1), ?)`, [nowIso]);
 }
 
 // API Routes for Cloudflare D1 SQLite Analytics
