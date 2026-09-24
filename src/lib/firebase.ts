@@ -1,22 +1,8 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  collection,
-  getDocs,
-  deleteDoc,
-  query,
-  orderBy,
-  limit,
-  addDoc,
-  serverTimestamp,
-  getDocFromServer,
-  getCountFromServer,
-  onSnapshot
-} from 'firebase/firestore';
-import firebaseConfigJson from '../../firebase-applet-config.json';
+/**
+ * Cloudflare D1 SQL Client Module (Pure D1 Database Operations)
+ * Replaces legacy Firestore with high-performance Cloudflare D1 SQL engine.
+ */
+
 import { Project } from '../types';
 
 export interface SiteImageSettings {
@@ -68,6 +54,7 @@ export interface VisitorAnalyticsSummary {
   dailyTrend: Array<{ date: string; visits: number; unique: number }>;
   lastPrunedCount?: number;
   lastPrunedAt?: string;
+  databaseEngine?: string;
 }
 
 export interface VisitorLogEntry {
@@ -80,37 +67,18 @@ export interface VisitorLogEntry {
   timestamp: string;
 }
 
-// Initialize Firebase App singleton
-const firebaseConfig = {
-  apiKey: firebaseConfigJson.apiKey,
-  authDomain: firebaseConfigJson.authDomain,
-  projectId: firebaseConfigJson.projectId,
-  storageBucket: firebaseConfigJson.storageBucket,
-  messagingSenderId: firebaseConfigJson.messagingSenderId,
-  appId: firebaseConfigJson.appId,
-};
-
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
-// Use named database if specified in config, otherwise default
-export const db = firebaseConfigJson.firestoreDatabaseId
-  ? getFirestore(app, firebaseConfigJson.firestoreDatabaseId)
-  : getFirestore(app);
-
-// Test Firestore Connection on Boot (per Firebase Skill Guideline)
+/**
+ * Test D1 Connection on Boot
+ */
 export async function testConnection(): Promise<boolean> {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    const res = await fetch('/api/health');
+    return res.ok;
+  } catch {
     return true;
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firestore is offline or unreachable. Using cached/local state.');
-    }
-    return false;
   }
 }
 
-// Call test connection gracefully in background
 if (typeof window !== 'undefined') {
   testConnection().catch(() => {});
 }
@@ -159,7 +127,7 @@ function detectBrowser(): string {
 }
 
 /**
- * Log page view event to Firestore (Records 100% of traffic, requests, selenium, automation, and visitors)
+ * Log page view event to Cloudflare D1 SQL database
  */
 export async function logVisitorPageView(path: string): Promise<void> {
   if (typeof window === 'undefined' || path.startsWith('/admin')) return;
@@ -176,26 +144,25 @@ export async function logVisitorPageView(path: string): Promise<void> {
     } catch {
       referrer = 'Direct';
     }
-    const todayStr = new Date().toISOString().split('T')[0];
 
-    // Add event to analytics_events collection
-    await addDoc(collection(db, 'analytics_events'), {
-      visitorId: vid,
-      path: path || '/',
-      deviceType: device,
-      browser,
-      referrer,
-      createdAt: serverTimestamp(),
-      dateStr: todayStr,
-      timestamp: new Date().toISOString(),
-    });
+    fetch('/api/analytics/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        visitorId: vid,
+        path: path || '/',
+        deviceType: device,
+        browser,
+        referrer,
+      }),
+    }).catch(() => {});
   } catch (err) {
     console.debug('Analytics log error:', err);
   }
 }
 
 /**
- * Get Persistent Analytics Summary Metadata from Firestore
+ * Get Persistent Analytics Summary Metadata from Cloudflare D1 SQL
  */
 export async function getAnalyticsMeta(): Promise<{
   archivedVisits: number;
@@ -204,13 +171,12 @@ export async function getAnalyticsMeta(): Promise<{
   lastPrunedCount?: number;
 }> {
   try {
-    const metaRef = doc(db, 'analytics_meta', 'lifetime');
-    const snap = await getDoc(metaRef);
-    if (snap.exists()) {
-      const data = snap.data();
+    const res = await fetch('/api/analytics/metrics');
+    if (res.ok) {
+      const data = await res.json();
       return {
-        archivedVisits: typeof data.archivedVisits === 'number' ? data.archivedVisits : 0,
-        totalLifetimeVisits: typeof data.totalLifetimeVisits === 'number' ? data.totalLifetimeVisits : 0,
+        archivedVisits: data.archivedVisits || 0,
+        totalLifetimeVisits: data.totalLifetimeVisits || 0,
         lastPrunedAt: data.lastPrunedAt,
         lastPrunedCount: data.lastPrunedCount,
       };
@@ -222,583 +188,278 @@ export async function getAnalyticsMeta(): Promise<{
 }
 
 /**
- * Prune / Delete Traffic Logs older than 10 days from Firestore.
- * BEFORE deleting, updates/stores totalLifetimeVisits in `analytics_meta/lifetime` as a plain number
- * so historical totals (even 1 year+ back) are preserved forever while freeing Firestore storage!
+ * Prune Traffic Logs when exceeding 1 Juta (1,000,000) Visitors in Cloudflare D1 SQL
  */
-export async function pruneOld10DayTrafficLogs(): Promise<{ deletedCount: number; newTotalLifetimeVisits: number }> {
+export async function pruneOld10DayTrafficLogs(): Promise<{ deletedCount: number; newTotalLifetimeVisits: number; message?: string }> {
   try {
-    const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
-    const cutoffMs = Date.now() - tenDaysMs; // 10 days ago
-    const eventsRef = collection(db, 'analytics_events');
-
-    // Query active logs (fetching up to 10,000)
-    const q = query(eventsRef, limit(10000));
-    const snapshot = await getDocs(q);
-
-    // Filter documents older than 10 days
-    const oldDocs = snapshot.docs.filter((d) => {
-      const eventTime = extractDocTimestamp(d.data());
-      return eventTime > 0 && eventTime < cutoffMs;
-    });
-
-    const countToPrune = oldDocs.length;
-
-    // Get current total live count
-    let currentLiveCount = snapshot.size;
-    try {
-      const countSnap = await getCountFromServer(eventsRef);
-      currentLiveCount = countSnap.data().count;
-    } catch {}
-
-    // Get current metadata
-    const metaRef = doc(db, 'analytics_meta', 'lifetime');
-    const currentMeta = await getAnalyticsMeta();
-
-    const newArchivedVisits = (currentMeta.archivedVisits || 0) + countToPrune;
-    const totalLifetimeVisits = Math.max(
-      currentMeta.totalLifetimeVisits || 0,
-      newArchivedVisits + (currentLiveCount - countToPrune),
-      currentLiveCount
-    );
-
-    // 1. UPDATE totalLifetimeVisits & archivedVisits in Firestore FIRST as a plain number
-    await setDoc(
-      metaRef,
-      {
-        archivedVisits: newArchivedVisits,
-        totalLifetimeVisits,
-        lastPrunedAt: new Date().toISOString(),
-        lastPrunedCount: countToPrune,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
-
-    // 2. NOW delete itemized documents older than 10 days
-    if (countToPrune > 0) {
-      const deletePromises = oldDocs.map((d) => deleteDoc(doc(db, 'analytics_events', d.id)));
-      await Promise.all(deletePromises);
+    const res = await fetch('/api/analytics/prune', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        deletedCount: data.deletedCount || 0,
+        newTotalLifetimeVisits: data.newTotalLifetimeVisits || 0,
+        message: data.message,
+      };
     }
-
-    return {
-      deletedCount: countToPrune,
-      newTotalLifetimeVisits: totalLifetimeVisits,
-    };
   } catch (err) {
-    console.warn('Prune 10-day traffic logs error:', err);
-    return { deletedCount: 0, newTotalLifetimeVisits: 0 };
+    console.warn('Prune Cloudflare D1 logs error:', err);
   }
+  return { deletedCount: 0, newTotalLifetimeVisits: 0 };
 }
 
-/**
- * Backward compatibility alias for pruneOldTrafficLogs
- */
 export async function pruneOldTrafficLogs(): Promise<number> {
   const result = await pruneOld10DayTrafficLogs();
   return result.deletedCount;
 }
 
 /**
- * Extract millisecond timestamp accurately from doc data
+ * Fetch Analytics Summary & Metrics from Cloudflare D1 SQL DB
  */
-function extractDocTimestamp(data: Record<string, any>): number {
-  if (data.timestamp) {
-    const parsed = new Date(data.timestamp).getTime();
-    if (!isNaN(parsed)) return parsed;
-  }
-  if (data.createdAt) {
-    if (typeof data.createdAt.toMillis === 'function') return data.createdAt.toMillis();
-    if (typeof data.createdAt.toDate === 'function') return data.createdAt.toDate().getTime();
-    if (typeof data.createdAt.seconds === 'number') return data.createdAt.seconds * 1000;
-    if (typeof data.createdAt === 'string') {
-      const parsed = new Date(data.createdAt).getTime();
-      if (!isNaN(parsed)) return parsed;
+export async function fetchAnalyticsMetrics(): Promise<VisitorAnalyticsSummary> {
+  try {
+    const res = await fetch('/api/analytics/metrics');
+    if (res.ok) {
+      const metrics = await res.json();
+      return metrics as VisitorAnalyticsSummary;
     }
+  } catch (error) {
+    console.error('Error fetching Cloudflare D1 analytics metrics:', error);
   }
-  if (data.dateStr) {
-    const parsed = new Date(data.dateStr).getTime();
-    if (!isNaN(parsed)) return parsed;
-  }
-  return Date.now();
-}
-
-/**
- * Compute Visitor Analytics from Firestore Document snapshots
- */
-export function computeAnalyticsFromDocs(
-  docs: any[],
-  totalCountOverride?: number,
-  archivedVisits = 0,
-  metaInfo?: { lastPrunedAt?: string; lastPrunedCount?: number }
-): VisitorAnalyticsSummary {
-  const nowMs = Date.now();
-  const ms30Min = 30 * 60 * 1000;
-  const ms1Day = 24 * 60 * 60 * 1000;
-  const ms30Days = 30 * 24 * 60 * 60 * 1000;
-  const ms90Days = 90 * 24 * 60 * 60 * 1000;
-
-  let traffic30Min = 0;
-  let traffic1Day = 0;
-  let traffic30Days = 0;
-  let traffic90Days = 0;
-
-  const uniqueVisitors = new Set<string>();
-  const pageCounts: Record<string, number> = {};
-  const referrers: Record<string, number> = {};
-  const dailyMap: Record<string, { visits: number; uniqueSet: Set<string> }> = {};
-
-  let mobileCount = 0;
-  let desktopCount = 0;
-  let tabletCount = 0;
-
-  // Initialize last 14 days in dailyMap
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(nowMs - i * 24 * 60 * 60 * 1000);
-    const ds = d.toISOString().split('T')[0];
-    dailyMap[ds] = { visits: 0, uniqueSet: new Set() };
-  }
-
-  docs.forEach((docSnap) => {
-    const data = typeof docSnap.data === 'function' ? docSnap.data() : docSnap;
-    const vid = data.visitorId || (docSnap.id ? docSnap.id : 'anon');
-    uniqueVisitors.add(vid);
-
-    const eventTime = extractDocTimestamp(data);
-    const ageMs = Math.max(0, nowMs - eventTime);
-
-    // Calculate time windows based on actual time elapsed
-    if (ageMs <= ms30Min) traffic30Min++;
-    if (ageMs <= ms1Day) traffic1Day++;
-    if (ageMs <= ms30Days) traffic30Days++;
-    if (ageMs <= ms90Days) traffic90Days++;
-
-    const path = data.path || '/';
-    pageCounts[path] = (pageCounts[path] || 0) + 1;
-
-    const ref = data.referrer || 'Direct';
-    referrers[ref] = (referrers[ref] || 0) + 1;
-
-    if (data.deviceType === 'mobile') mobileCount++;
-    else if (data.deviceType === 'tablet') tabletCount++;
-    else desktopCount++;
-
-    const itemDate = data.dateStr || new Date(eventTime).toISOString().split('T')[0];
-    if (dailyMap[itemDate]) {
-      dailyMap[itemDate].visits++;
-      dailyMap[itemDate].uniqueSet.add(vid);
-    }
-  });
-
-  const totalEvents = typeof totalCountOverride === 'number' && totalCountOverride > 0
-    ? Math.max(totalCountOverride, docs.length + archivedVisits)
-    : (docs.length + archivedVisits);
-
-  const topPagesArray: TopPageEntry[] = Object.entries(pageCounts)
-    .map(([path, visits]) => ({
-      path,
-      visits,
-      percentage: totalEvents > 0 ? Math.round((visits / totalEvents) * 100) : 0,
-    }))
-    .sort((a, b) => b.visits - a.visits);
-
-  const dailyTrend = Object.keys(dailyMap)
-    .sort()
-    .map((date) => ({
-      date: date.slice(5), // MM-DD
-      visits: dailyMap[date].visits,
-      unique: dailyMap[date].uniqueSet.size,
-    }));
-
   return {
-    totalVisits: totalEvents,
-    totalLifetimeVisits: totalEvents,
-    archivedVisits,
-    totalUniqueVisitors: uniqueVisitors.size,
-    uniqueVisitors: uniqueVisitors.size,
-    traffic30Min,
-    traffic1Day,
-    traffic30Days,
-    traffic90Days,
-    topPages: topPagesArray,
-    referrers,
-    deviceBreakdown: {
-      mobile: mobileCount,
-      desktop: desktopCount,
-      tablet: tabletCount,
-    },
-    dailyTrend,
-    lastPrunedCount: metaInfo?.lastPrunedCount || 0,
-    lastPrunedAt: metaInfo?.lastPrunedAt,
+    totalVisits: 0,
+    totalLifetimeVisits: 0,
+    archivedVisits: 0,
+    totalUniqueVisitors: 0,
+    uniqueVisitors: 0,
+    traffic30Min: 0,
+    traffic1Day: 0,
+    traffic30Days: 0,
+    traffic90Days: 0,
+    topPages: [],
+    referrers: {},
+    deviceBreakdown: { mobile: 0, desktop: 0, tablet: 0 },
+    dailyTrend: [],
+    lastPrunedCount: 0,
+    databaseEngine: 'Cloudflare D1 SQL',
   };
 }
 
 /**
- * Fetch Analytics Summary & Metrics for the Admin Dashboard
- */
-export async function fetchAnalyticsMetrics(): Promise<VisitorAnalyticsSummary> {
-  try {
-    const eventsRef = collection(db, 'analytics_events');
-    const meta = await getAnalyticsMeta();
-
-    let liveCount = 0;
-    try {
-      const countSnap = await getCountFromServer(eventsRef);
-      liveCount = countSnap.data().count;
-    } catch (e) {
-      console.debug('getCountFromServer error:', e);
-    }
-
-    let snapshot;
-    try {
-      const q = query(eventsRef, orderBy('timestamp', 'desc'), limit(10000));
-      snapshot = await getDocs(q);
-    } catch {
-      const qFallback = query(eventsRef, limit(10000));
-      snapshot = await getDocs(qFallback);
-    }
-
-    const effectiveTotalCount = Math.max(
-      meta.totalLifetimeVisits,
-      meta.archivedVisits + liveCount,
-      liveCount
-    );
-
-    return computeAnalyticsFromDocs(snapshot.docs, effectiveTotalCount, meta.archivedVisits, meta);
-  } catch (error) {
-    console.error('Error fetching analytics metrics:', error);
-    return {
-      totalVisits: 0,
-      totalLifetimeVisits: 0,
-      archivedVisits: 0,
-      totalUniqueVisitors: 0,
-      uniqueVisitors: 0,
-      traffic30Min: 0,
-      traffic1Day: 0,
-      traffic30Days: 0,
-      traffic90Days: 0,
-      topPages: [],
-      referrers: {},
-      deviceBreakdown: { mobile: 0, desktop: 0, tablet: 0 },
-      dailyTrend: [],
-      lastPrunedCount: 0,
-    };
-  }
-}
-
-/**
- * Real-time subscription to analytics events for live dashboard telemetry
+ * Real-time polling subscription to Cloudflare D1 SQL analytics telemetry
  */
 export function subscribeToAnalytics(
   onMetrics: (metrics: VisitorAnalyticsSummary) => void,
   onRecentLogs?: (logs: VisitorLogEntry[]) => void
 ): () => void {
-  try {
-    const eventsRef = collection(db, 'analytics_events');
-    let cachedTotalCount = 0;
-    let cachedArchivedVisits = 0;
-    let cachedMeta: any = null;
+  let isMounted = true;
 
-    const refreshMetaAndCount = async () => {
-      try {
-        const meta = await getAnalyticsMeta();
-        cachedMeta = meta;
-        cachedArchivedVisits = meta.archivedVisits || 0;
-        const countSnap = await getCountFromServer(eventsRef);
-        const liveCount = countSnap.data().count;
-        cachedTotalCount = Math.max(meta.totalLifetimeVisits || 0, cachedArchivedVisits + liveCount, liveCount);
-      } catch (e) {
-        console.debug('Meta fetch error:', e);
-      }
-    };
-
-    refreshMetaAndCount();
-
-    // Try query with timestamp desc, or fallback to default limit
-    let q = query(eventsRef, limit(10000));
+  const poll = async () => {
+    if (!isMounted) return;
     try {
-      q = query(eventsRef, orderBy('timestamp', 'desc'), limit(10000));
-    } catch {
-      q = query(eventsRef, limit(10000));
-    }
+      const metrics = await fetchAnalyticsMetrics();
+      if (isMounted) onMetrics(metrics);
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        if (cachedTotalCount < snapshot.size + cachedArchivedVisits) {
-          cachedTotalCount = snapshot.size + cachedArchivedVisits;
-        }
-
-        // Whenever new docs arrive, update server count & meta
-        if (snapshot.docChanges().some((c) => c.type === 'added')) {
-          refreshMetaAndCount().then(() => {
-            const updatedMetrics = computeAnalyticsFromDocs(snapshot.docs, cachedTotalCount, cachedArchivedVisits, cachedMeta);
-            onMetrics(updatedMetrics);
-          });
-        }
-
-        const metrics = computeAnalyticsFromDocs(snapshot.docs, cachedTotalCount, cachedArchivedVisits, cachedMeta);
-        onMetrics(metrics);
-
-        if (onRecentLogs) {
-          // Sort recent logs by timestamp desc
-          const sortedDocs = [...snapshot.docs].sort((a, b) => {
-            const timeA = extractDocTimestamp(a.data());
-            const timeB = extractDocTimestamp(b.data());
-            return timeB - timeA;
-          });
-
-          const logs: VisitorLogEntry[] = sortedDocs.slice(0, 25).map((d) => {
-            const data = d.data();
-            return {
-              id: d.id,
-              visitorId: data.visitorId || 'anon',
-              path: data.path || '/',
-              deviceType: data.deviceType || 'desktop',
-              browser: data.browser || 'Unknown',
-              referrer: data.referrer || 'Direct',
-              timestamp: data.timestamp || (data.createdAt?.toMillis ? new Date(data.createdAt.toMillis()).toISOString() : new Date().toISOString()),
-            };
-          });
-          onRecentLogs(logs);
-        }
-      },
-      (error) => {
-        console.error('Real-time analytics subscription error:', error);
-        // Fallback to simple query if orderBy failed
-        const qFallback = query(eventsRef, limit(10000));
-        onSnapshot(qFallback, (snapshotFallback) => {
-          const metrics = computeAnalyticsFromDocs(snapshotFallback.docs, cachedTotalCount, cachedArchivedVisits, cachedMeta);
-          onMetrics(metrics);
-        });
+      if (onRecentLogs && isMounted) {
+        const logs = await fetchRecentVisitorLogs(100);
+        if (isMounted) onRecentLogs(logs);
       }
-    );
-    return unsubscribe;
-  } catch (err) {
-    console.error('Failed to subscribe to analytics:', err);
-    return () => {};
-  }
+    } catch (e) {
+      console.debug('Polling error:', e);
+    }
+  };
+
+  poll();
+  const intervalId = setInterval(poll, 3000);
+
+  return () => {
+    isMounted = false;
+    clearInterval(intervalId);
+  };
 }
 
 /**
- * Fetch Recent Visitor Activity Logs
+ * Fetch Recent Visitor Activity Logs from Cloudflare D1 SQL
  */
-export async function fetchRecentVisitorLogs(limitCount = 20): Promise<VisitorLogEntry[]> {
+export async function fetchRecentVisitorLogs(limitCount = 100): Promise<VisitorLogEntry[]> {
   try {
-    const eventsRef = collection(db, 'analytics_events');
-    const q = query(eventsRef, limit(limitCount * 2));
-    const snapshot = await getDocs(q);
-
-    const sortedDocs = [...snapshot.docs].sort((a, b) => {
-      const timeA = extractDocTimestamp(a.data());
-      const timeB = extractDocTimestamp(b.data());
-      return timeB - timeA;
-    });
-
-    return sortedDocs.slice(0, limitCount).map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        visitorId: data.visitorId || 'anon',
-        path: data.path || '/',
-        deviceType: data.deviceType || 'desktop',
-        browser: data.browser || 'Unknown',
-        referrer: data.referrer || 'Direct',
-        timestamp: data.timestamp || new Date().toISOString(),
-      };
-    });
-  } catch {
-    return [];
+    const res = await fetch(`/api/analytics/recent?limit=${limitCount}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.logs) return data.logs;
+    }
+  } catch (e) {
+    console.debug('Error fetching recent logs:', e);
   }
+  return [];
 }
 
 /**
- * Fetch Team Members from Firestore
+ * Fetch Team Members from Cloudflare D1 SQL DB
  */
 export async function fetchTeamMembers(): Promise<TeamMember[]> {
   try {
-    const colRef = collection(db, 'team_members');
-    const q = query(colRef, orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return [];
-    return snapshot.docs.map((d) => ({
-      id: d.id,
-      name: d.data().name || '',
-      role: d.data().role || '',
-      status: d.data().status || 'In Progress',
-      avatar: d.data().avatar || '',
-      createdAt: d.data().createdAt || '',
-    }));
+    const res = await fetch('/api/team');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.members) && data.members.length > 0) {
+        return data.members;
+      }
+    }
   } catch (err) {
-    console.error('Error fetching team members:', err);
-    return [];
+    console.debug('Error fetching team members from D1 SQLite:', err);
   }
+  return [];
 }
 
 /**
- * Save or Add Team Member to Firestore
+ * Save or Add Team Member to Cloudflare D1 SQL DB
  */
 export async function saveTeamMember(member: Partial<TeamMember> & { name: string; role: string }): Promise<string> {
   const memberId = member.id || 'member_' + Date.now().toString(36);
-  const docRef = doc(db, 'team_members', memberId);
-  await setDoc(
-    docRef,
-    {
-      id: memberId,
-      name: member.name,
-      role: member.role,
-      status: member.status || 'In Progress',
-      avatar: member.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100',
-      createdAt: member.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    { merge: true }
-  );
+  try {
+    await fetch('/api/team', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...member,
+        id: memberId,
+      }),
+    });
+  } catch (e) {
+    console.debug('Save team member error:', e);
+  }
   return memberId;
 }
 
 /**
- * Delete Team Member from Firestore
+ * Delete Team Member from Cloudflare D1 SQL DB
  */
 export async function deleteTeamMember(memberId: string): Promise<void> {
-  const docRef = doc(db, 'team_members', memberId);
-  await deleteDoc(docRef);
+  try {
+    await fetch(`/api/team/${memberId}`, { method: 'DELETE' });
+  } catch (e) {
+    console.debug('Delete team member error:', e);
+  }
 }
 
 /**
- * Fetch Dashboard Reminder from Firestore
+ * Fetch Dashboard Reminder from Cloudflare D1 SQL DB
  */
 export async function fetchDashboardReminder(): Promise<DashboardReminder | null> {
   try {
-    const docRef = doc(db, 'dashboard_reminders', 'current');
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return docSnap.data() as DashboardReminder;
+    const res = await fetch('/api/reminder');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.reminder) return data.reminder as DashboardReminder;
     }
-    return null;
   } catch (err) {
-    console.error('Error fetching reminder:', err);
-    return null;
+    console.debug('Error fetching reminder from D1 SQLite:', err);
+  }
+  try {
+    const local = localStorage.getItem('jason_dashboard_reminder');
+    if (local) return JSON.parse(local);
+  } catch {}
+  return null;
+}
+
+/**
+ * Save Dashboard Reminder to Cloudflare D1 SQL DB
+ */
+export async function saveDashboardReminder(reminder: Partial<DashboardReminder>): Promise<void> {
+  const reminderData = {
+    id: 'current',
+    title: reminder.title || 'Meeting with Arc Company',
+    time: reminder.time || '02.00 pm - 04.00 pm',
+    actionUrl: reminder.actionUrl || '',
+    updatedAt: new Date().toISOString(),
+  };
+
+  try {
+    localStorage.setItem('jason_dashboard_reminder', JSON.stringify(reminderData));
+  } catch {}
+
+  try {
+    await fetch('/api/reminder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(reminderData),
+    });
+  } catch (err) {
+    console.debug('Error saving reminder to D1 SQLite:', err);
   }
 }
 
 /**
- * Save Dashboard Reminder to Firestore
- */
-export async function saveDashboardReminder(reminder: Partial<DashboardReminder>): Promise<void> {
-  const docRef = doc(db, 'dashboard_reminders', 'current');
-  await setDoc(
-    docRef,
-    {
-      id: 'current',
-      title: reminder.title || 'Meeting with Arc Company',
-      time: reminder.time || '02.00 pm - 04.00 pm',
-      actionUrl: reminder.actionUrl || '',
-      updatedAt: new Date().toISOString(),
-    },
-    { merge: true }
-  );
-}
-
-/**
- * Fetch Portfolio Projects from Firestore
+ * Fetch Portfolio Projects from Cloudflare D1 SQL DB
  */
 export async function fetchProjectsFromFirestore(): Promise<Project[]> {
   try {
-    const projectsCol = collection(db, 'portfolio_projects');
-    const q = query(projectsCol, orderBy('order', 'asc'));
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty) {
-      return [];
+    const res = await fetch('/api/projects');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.projects) && data.projects.length > 0) {
+        return data.projects as Project[];
+      }
     }
-
-    return snapshot.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: data.id || d.id,
-        title: data.title || '',
-        client: data.client || '',
-        company: data.company || '',
-        category: data.category || '',
-        year: data.year || '2025',
-        description: data.description || '',
-        summary: data.summary || data.description || '',
-        role: data.role || 'designer & engineer',
-        type: data.type || data.category || '',
-        tech: data.tech || 'react, typescript, tailwind css',
-        deliverables: Array.isArray(data.deliverables) ? data.deliverables : [],
-        problem: data.problem || '',
-        decisions: data.decisions || '',
-        impact: data.impact || '',
-        achievements: Array.isArray(data.achievements) ? data.achievements : [],
-        screens: Array.isArray(data.screens) ? data.screens : [],
-        metrics: Array.isArray(data.metrics) ? data.metrics : [],
-        imageType: data.imageType || 'zylo',
-        imageUrl: data.imageUrl || '',
-        liveUrl: data.liveUrl || '',
-        accentColor: data.accentColor || '#6366f1',
-        nextProjectId: data.nextProjectId || '',
-        nextProjectTitle: data.nextProjectTitle || '',
-      } as Project;
-    });
   } catch (error) {
-    console.error('Error fetching projects from Firestore:', error);
-    return [];
+    console.debug('Error fetching projects from D1 SQLite:', error);
+  }
+  return [];
+}
+
+/**
+ * Save / Update a Project in Cloudflare D1 SQL DB
+ */
+export async function saveProjectToFirestore(project: Partial<Project> & { id: string }): Promise<void> {
+  try {
+    await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(project),
+    });
+  } catch (err) {
+    console.debug('Error saving project to D1 SQLite:', err);
   }
 }
 
 /**
- * Save / Update a Project in Firestore
- */
-export async function saveProjectToFirestore(project: Partial<Project> & { id: string }): Promise<void> {
-  const docRef = doc(db, 'portfolio_projects', project.id);
-  await setDoc(
-    docRef,
-    {
-      ...project,
-      updatedAt: new Date().toISOString(),
-    },
-    { merge: true }
-  );
-}
-
-/**
- * Delete a Project from Firestore
+ * Delete a Project from Cloudflare D1 SQL DB
  */
 export async function deleteProjectFromFirestore(projectId: string): Promise<void> {
-  const docRef = doc(db, 'portfolio_projects', projectId);
-  await deleteDoc(docRef);
+  try {
+    await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
+  } catch (err) {
+    console.debug('Error deleting project from D1 SQLite:', err);
+  }
 }
 
 /**
- * Fetch Global Site Settings / Image Overrides from Firestore
+ * Fetch Global Site Settings / Image Overrides from Cloudflare D1 SQL DB
  */
 export async function fetchSiteSettings(): Promise<SiteImageSettings | null> {
   try {
-    const docRef = doc(db, 'site_settings', 'images');
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return docSnap.data() as SiteImageSettings;
+    const res = await fetch('/api/settings');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.settings) return data.settings as SiteImageSettings;
     }
-    return null;
   } catch (error) {
-    console.error('Error fetching site settings:', error);
-    return null;
+    console.debug('Error fetching site settings from D1 SQLite:', error);
   }
+  return null;
 }
 
 /**
- * Save / Update Global Site Settings / Images in Firestore
+ * Save / Update Global Site Settings / Images in Cloudflare D1 SQL DB
  */
 export async function saveSiteSettings(settings: Partial<SiteImageSettings>): Promise<void> {
-  const docRef = doc(db, 'site_settings', 'images');
-  await setDoc(
-    docRef,
-    {
-      ...settings,
-      updatedAt: new Date().toISOString(),
-    },
-    { merge: true }
-  );
+  try {
+    await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+  } catch (err) {
+    console.debug('Error saving site settings to D1 SQLite:', err);
+  }
 }

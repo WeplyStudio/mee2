@@ -310,7 +310,7 @@ export const AdminDashboard: React.FC<Props> = ({
   const handlePruneLogs = async () => {
     if (
       !confirm(
-        'Apakah Anda yakin ingin menghapus list histori kunjungan yang sudah lebih dari 10 hari?\n\nSebelum list data dihapus, jumlah Total Visitor akan diperbarui dan tersimpan permanen di database Firestore (totalLifetimeVisits) sehingga data 1 tahun kebelakang tidak hilang!'
+        'Pembersihan log histori visitor otomatis/manual berlaku ketika total data visitor mencapai 1 JUTA (1,000,000) data di Cloudflare D1 SQL Database.\n\nSemua akumulasi total visit (Lifetime Visitors) tersimpan secara permanen dan tidak akan pernah terhapus!'
       )
     )
       return;
@@ -318,9 +318,13 @@ export const AdminDashboard: React.FC<Props> = ({
     try {
       const result = await pruneOld10DayTrafficLogs();
       await loadAnalytics();
-      showToast(
-        `Pembersihan sukses! ${result.deletedCount} list data (>10 hari) dihapus. Total Visitor (${result.newTotalLifetimeVisits.toLocaleString('id-ID')} Hits) tetap aman di database.`
-      );
+      if (result.message) {
+        showToast(result.message);
+      } else {
+        showToast(
+          `Cloudflare D1: ${result.deletedCount.toLocaleString('id-ID')} data dibersihkan. Total Lifetime Visitor (${result.newTotalLifetimeVisits.toLocaleString('id-ID')} Hits) aman!`
+        );
+      }
     } catch (err) {
       alert('Gagal membersihkan log: ' + String(err));
     } finally {
@@ -563,9 +567,9 @@ export const AdminDashboard: React.FC<Props> = ({
           <div className="pt-4 border-t border-zinc-100 flex items-center justify-between text-[10px] font-mono-code text-zinc-400">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Firestore Connected
+              Cloudflare D1 SQLite Connected
             </span>
-            <span className="font-bold">v2.5.0</span>
+            <span className="font-bold">v3.0.0 (D1)</span>
           </div>
 
         </div>
@@ -1545,7 +1549,7 @@ export const AdminDashboard: React.FC<Props> = ({
                   Analitik Visitor & Traffic Website
                 </h2>
                 <p className="text-xs font-mono-code text-zinc-500 mt-1">
-                  Pencatatan otomatis setiap kunjungan halaman dengan penyimpanan otomatis di Google Cloud Firestore.
+                  Pencatatan otomatis setiap kunjungan halaman dengan penyimpanan cepat &amp; unlimited di Cloudflare D1 SQLite Database.
                 </p>
               </div>
 
@@ -1554,10 +1558,10 @@ export const AdminDashboard: React.FC<Props> = ({
                   onClick={handlePruneLogs}
                   disabled={isPruning}
                   className="flex items-center gap-2 text-xs font-mono-code px-3.5 py-2.5 bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 text-zinc-800 font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                  title="Update angka totalVisitor di Firestore lalu bersihkan list histori detail yang sudah >10 hari"
+                  title="Bersihkan histori visitor berlebih ketika melebihi 1,000,000 data di Cloudflare D1"
                 >
                   <Trash2 className={`w-3.5 h-3.5 ${isPruning ? 'animate-spin' : ''}`} />
-                  <span>Bersihkan Histori &gt; 10 Hari</span>
+                  <span>Pembersihan Log (&gt; 1 Juta Visitor)</span>
                 </button>
 
                 <button
@@ -1578,20 +1582,20 @@ export const AdminDashboard: React.FC<Props> = ({
                 <div className="space-y-2 relative z-10">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-200 text-xs font-mono-code backdrop-blur-xs border border-white/10">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Total Visitor Lifetime (Permanen di Database)</span>
+                    <span>Total Visitor Lifetime (Cloudflare D1 SQL)</span>
                   </div>
                   <div className="text-4xl sm:text-5xl font-extrabold font-mono-code tracking-tight">
                     {analytics ? analytics.totalVisits.toLocaleString('id-ID') : '...'}
                     <span className="text-xl sm:text-2xl font-normal text-emerald-200/80 ml-2">Total Hits</span>
                   </div>
                   <p className="text-xs text-emerald-100/70 font-mono-code max-w-xl">
-                    Akumulasi total kunjungan tersimpan permanen di Firestore (<span className="text-emerald-300 font-bold">totalLifetimeVisits</span>). List data detail otomatis dibersihkan tiap 10 hari tanpa menghapus angka total!
+                    Akumulasi total kunjungan tersimpan permanen di Cloudflare D1 SQL (<span className="text-emerald-300 font-bold">totalLifetimeVisits</span>). Pembersihan otomatis berlaku jika data log melebihi <span className="text-white font-bold">1 Juta Visitor</span> tanpa pernah menghapus total lifetime!
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 relative z-10 shrink-0">
                   <div className="bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/10">
-                    <span className="text-[10px] text-emerald-200/80 uppercase font-mono-code block">Hits Terarsip (&gt;10h)</span>
+                    <span className="text-[10px] text-emerald-200/80 uppercase font-mono-code block">Hits Terarsip (&gt;1M)</span>
                     <span className="text-xl font-bold font-mono-code text-white mt-1 block">
                       {analytics ? (analytics.archivedVisits || 0).toLocaleString('id-ID') : 0}
                     </span>
@@ -1615,7 +1619,7 @@ export const AdminDashboard: React.FC<Props> = ({
                 <h3 className="text-xs font-mono-code font-bold uppercase tracking-wider text-zinc-600">
                   Ringkasan Traffic Menurut Rentang Waktu
                 </h3>
-                <span className="text-[11px] font-mono-code text-zinc-400">List detail: Simpan 10 Hari | Total Visitor: Permanen</span>
+                <span className="text-[11px] font-mono-code text-zinc-400">Kapasitas: 1 Juta Visitor Logs | Total Lifetime: Permanen</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1671,20 +1675,20 @@ export const AdminDashboard: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* 90 Hari Terakhir */}
+                {/* Total Lifetime Visitor Card */}
                 <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-2xs relative overflow-hidden group hover:border-zinc-400 transition-all">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[11px] font-mono-code font-bold text-zinc-600 uppercase tracking-wider">
-                      Traffic 90 Hari
+                      Lifetime Visitor Hits
                     </span>
-                    <Globe className="w-4 h-4 text-zinc-500" />
+                    <Globe className="w-4 h-4 text-emerald-600" />
                   </div>
                   <div className="text-3xl font-black text-zinc-950 font-mono-code">
-                    {analytics ? analytics.traffic90Days.toLocaleString() : '...'}
+                    {analytics ? analytics.totalLifetimeVisits.toLocaleString('id-ID') : '...'}
                   </div>
                   <div className="text-[11px] text-zinc-500 font-mono-code mt-2 flex items-center justify-between border-t border-zinc-100 pt-2">
-                    <span>Batas simpan maksimum</span>
-                    <span className="font-bold text-zinc-800">Maks 90 Hari</span>
+                    <span>Lifetime Counter</span>
+                    <span className="font-bold text-emerald-700">Unbounded (1B+)</span>
                   </div>
                 </div>
               </div>
