@@ -217,7 +217,7 @@ export default {
     // Analytics Metrics Endpoint
     if (path === '/api/analytics/metrics') {
       const nowMs = Date.now();
-      const eventsRes = await env.DB.prepare('SELECT * FROM analytics_events ORDER BY timestamp DESC LIMIT 10000').all();
+      const eventsRes = await env.DB.prepare('SELECT * FROM analytics_events ORDER BY timestamp DESC LIMIT 100000').all();
       const metaRow =
         (await env.DB.prepare("SELECT * FROM analytics_meta WHERE id = 'lifetime'").first()) || {
           archivedVisits: 0,
