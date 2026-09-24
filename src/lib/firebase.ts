@@ -54,6 +54,8 @@ export interface DashboardReminder {
 
 export interface VisitorAnalyticsSummary {
   totalVisits: number;
+  totalLifetimeVisits: number;
+  archivedVisits: number;
   totalUniqueVisitors: number;
   uniqueVisitors: number;
   traffic30Min: number;
@@ -65,6 +67,7 @@ export interface VisitorAnalyticsSummary {
   deviceBreakdown: { mobile: number; desktop: number; tablet: number };
   dailyTrend: Array<{ date: string; visits: number; unique: number }>;
   lastPrunedCount?: number;
+  lastPrunedAt?: string;
 }
 
 export interface VisitorLogEntry {
@@ -192,41 +195,108 @@ export async function logVisitorPageView(path: string): Promise<void> {
 }
 
 /**
- * Prune / Delete Traffic Logs older than 90 days from Firestore
+ * Get Persistent Analytics Summary Metadata from Firestore
  */
-export async function pruneOldTrafficLogs(): Promise<number> {
+export async function getAnalyticsMeta(): Promise<{
+  archivedVisits: number;
+  totalLifetimeVisits: number;
+  lastPrunedAt?: string;
+  lastPrunedCount?: number;
+}> {
   try {
-    const cutoffMs = Date.now() - 90 * 24 * 60 * 60 * 1000; // 90 days ago
+    const metaRef = doc(db, 'analytics_meta', 'lifetime');
+    const snap = await getDoc(metaRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      return {
+        archivedVisits: typeof data.archivedVisits === 'number' ? data.archivedVisits : 0,
+        totalLifetimeVisits: typeof data.totalLifetimeVisits === 'number' ? data.totalLifetimeVisits : 0,
+        lastPrunedAt: data.lastPrunedAt,
+        lastPrunedCount: data.lastPrunedCount,
+      };
+    }
+  } catch (e) {
+    console.debug('Error reading analytics meta:', e);
+  }
+  return { archivedVisits: 0, totalLifetimeVisits: 0 };
+}
+
+/**
+ * Prune / Delete Traffic Logs older than 10 days from Firestore.
+ * BEFORE deleting, updates/stores totalLifetimeVisits in `analytics_meta/lifetime` as a plain number
+ * so historical totals (even 1 year+ back) are preserved forever while freeing Firestore storage!
+ */
+export async function pruneOld10DayTrafficLogs(): Promise<{ deletedCount: number; newTotalLifetimeVisits: number }> {
+  try {
+    const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
+    const cutoffMs = Date.now() - tenDaysMs; // 10 days ago
     const eventsRef = collection(db, 'analytics_events');
-    const snapshot = await getDocs(query(eventsRef, limit(300)));
 
-    let deletedCount = 0;
-    const deletePromises: Promise<void>[] = [];
+    // Query active logs (fetching up to 10,000)
+    const q = query(eventsRef, limit(10000));
+    const snapshot = await getDocs(q);
 
-    snapshot.docs.forEach((d) => {
-      const data = d.data();
-      const tsStr = data.timestamp;
-      let tsMs = 0;
-      if (typeof tsStr === 'string') {
-        tsMs = new Date(tsStr).getTime();
-      } else if (data.createdAt && typeof data.createdAt.toMillis === 'function') {
-        tsMs = data.createdAt.toMillis();
-      }
-
-      if (tsMs > 0 && tsMs < cutoffMs) {
-        deletePromises.push(deleteDoc(doc(db, 'analytics_events', d.id)));
-        deletedCount++;
-      }
+    // Filter documents older than 10 days
+    const oldDocs = snapshot.docs.filter((d) => {
+      const eventTime = extractDocTimestamp(d.data());
+      return eventTime > 0 && eventTime < cutoffMs;
     });
 
-    if (deletePromises.length > 0) {
+    const countToPrune = oldDocs.length;
+
+    // Get current total live count
+    let currentLiveCount = snapshot.size;
+    try {
+      const countSnap = await getCountFromServer(eventsRef);
+      currentLiveCount = countSnap.data().count;
+    } catch {}
+
+    // Get current metadata
+    const metaRef = doc(db, 'analytics_meta', 'lifetime');
+    const currentMeta = await getAnalyticsMeta();
+
+    const newArchivedVisits = (currentMeta.archivedVisits || 0) + countToPrune;
+    const totalLifetimeVisits = Math.max(
+      currentMeta.totalLifetimeVisits || 0,
+      newArchivedVisits + (currentLiveCount - countToPrune),
+      currentLiveCount
+    );
+
+    // 1. UPDATE totalLifetimeVisits & archivedVisits in Firestore FIRST as a plain number
+    await setDoc(
+      metaRef,
+      {
+        archivedVisits: newArchivedVisits,
+        totalLifetimeVisits,
+        lastPrunedAt: new Date().toISOString(),
+        lastPrunedCount: countToPrune,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    // 2. NOW delete itemized documents older than 10 days
+    if (countToPrune > 0) {
+      const deletePromises = oldDocs.map((d) => deleteDoc(doc(db, 'analytics_events', d.id)));
       await Promise.all(deletePromises);
     }
-    return deletedCount;
+
+    return {
+      deletedCount: countToPrune,
+      newTotalLifetimeVisits: totalLifetimeVisits,
+    };
   } catch (err) {
-    console.warn('Prune traffic logs error:', err);
-    return 0;
+    console.warn('Prune 10-day traffic logs error:', err);
+    return { deletedCount: 0, newTotalLifetimeVisits: 0 };
   }
+}
+
+/**
+ * Backward compatibility alias for pruneOldTrafficLogs
+ */
+export async function pruneOldTrafficLogs(): Promise<number> {
+  const result = await pruneOld10DayTrafficLogs();
+  return result.deletedCount;
 }
 
 /**
@@ -256,7 +326,12 @@ function extractDocTimestamp(data: Record<string, any>): number {
 /**
  * Compute Visitor Analytics from Firestore Document snapshots
  */
-export function computeAnalyticsFromDocs(docs: any[], totalCountOverride?: number): VisitorAnalyticsSummary {
+export function computeAnalyticsFromDocs(
+  docs: any[],
+  totalCountOverride?: number,
+  archivedVisits = 0,
+  metaInfo?: { lastPrunedAt?: string; lastPrunedCount?: number }
+): VisitorAnalyticsSummary {
   const nowMs = Date.now();
   const ms30Min = 30 * 60 * 1000;
   const ms1Day = 24 * 60 * 60 * 1000;
@@ -315,9 +390,9 @@ export function computeAnalyticsFromDocs(docs: any[], totalCountOverride?: numbe
     }
   });
 
-  const totalEvents = typeof totalCountOverride === 'number' && totalCountOverride > docs.length
-    ? totalCountOverride
-    : docs.length;
+  const totalEvents = typeof totalCountOverride === 'number' && totalCountOverride > 0
+    ? Math.max(totalCountOverride, docs.length + archivedVisits)
+    : (docs.length + archivedVisits);
 
   const topPagesArray: TopPageEntry[] = Object.entries(pageCounts)
     .map(([path, visits]) => ({
@@ -337,6 +412,8 @@ export function computeAnalyticsFromDocs(docs: any[], totalCountOverride?: numbe
 
   return {
     totalVisits: totalEvents,
+    totalLifetimeVisits: totalEvents,
+    archivedVisits,
     totalUniqueVisitors: uniqueVisitors.size,
     uniqueVisitors: uniqueVisitors.size,
     traffic30Min,
@@ -351,7 +428,8 @@ export function computeAnalyticsFromDocs(docs: any[], totalCountOverride?: numbe
       tablet: tabletCount,
     },
     dailyTrend,
-    lastPrunedCount: 0,
+    lastPrunedCount: metaInfo?.lastPrunedCount || 0,
+    lastPrunedAt: metaInfo?.lastPrunedAt,
   };
 }
 
@@ -361,27 +439,38 @@ export function computeAnalyticsFromDocs(docs: any[], totalCountOverride?: numbe
 export async function fetchAnalyticsMetrics(): Promise<VisitorAnalyticsSummary> {
   try {
     const eventsRef = collection(db, 'analytics_events');
-    let totalCount = 0;
+    const meta = await getAnalyticsMeta();
+
+    let liveCount = 0;
     try {
       const countSnap = await getCountFromServer(eventsRef);
-      totalCount = countSnap.data().count;
+      liveCount = countSnap.data().count;
     } catch (e) {
       console.debug('getCountFromServer error:', e);
     }
 
     let snapshot;
     try {
-      const q = query(eventsRef, orderBy('timestamp', 'desc'), limit(2000));
+      const q = query(eventsRef, orderBy('timestamp', 'desc'), limit(10000));
       snapshot = await getDocs(q);
     } catch {
-      const qFallback = query(eventsRef, limit(2000));
+      const qFallback = query(eventsRef, limit(10000));
       snapshot = await getDocs(qFallback);
     }
-    return computeAnalyticsFromDocs(snapshot.docs, totalCount);
+
+    const effectiveTotalCount = Math.max(
+      meta.totalLifetimeVisits,
+      meta.archivedVisits + liveCount,
+      liveCount
+    );
+
+    return computeAnalyticsFromDocs(snapshot.docs, effectiveTotalCount, meta.archivedVisits, meta);
   } catch (error) {
     console.error('Error fetching analytics metrics:', error);
     return {
       totalVisits: 0,
+      totalLifetimeVisits: 0,
+      archivedVisits: 0,
       totalUniqueVisitors: 0,
       uniqueVisitors: 0,
       traffic30Min: 0,
@@ -407,13 +496,23 @@ export function subscribeToAnalytics(
   try {
     const eventsRef = collection(db, 'analytics_events');
     let cachedTotalCount = 0;
+    let cachedArchivedVisits = 0;
+    let cachedMeta: any = null;
 
-    // Fetch exact total count from server
-    getCountFromServer(eventsRef)
-      .then((countSnap) => {
-        cachedTotalCount = countSnap.data().count;
-      })
-      .catch((e) => console.debug('Initial count fetch error:', e));
+    const refreshMetaAndCount = async () => {
+      try {
+        const meta = await getAnalyticsMeta();
+        cachedMeta = meta;
+        cachedArchivedVisits = meta.archivedVisits || 0;
+        const countSnap = await getCountFromServer(eventsRef);
+        const liveCount = countSnap.data().count;
+        cachedTotalCount = Math.max(meta.totalLifetimeVisits || 0, cachedArchivedVisits + liveCount, liveCount);
+      } catch (e) {
+        console.debug('Meta fetch error:', e);
+      }
+    };
+
+    refreshMetaAndCount();
 
     // Try query with timestamp desc, or fallback to default limit
     let q = query(eventsRef, limit(10000));
@@ -426,22 +525,19 @@ export function subscribeToAnalytics(
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        if (cachedTotalCount < snapshot.size) {
-          cachedTotalCount = snapshot.size;
+        if (cachedTotalCount < snapshot.size + cachedArchivedVisits) {
+          cachedTotalCount = snapshot.size + cachedArchivedVisits;
         }
 
-        // Whenever new docs arrive, update server count
+        // Whenever new docs arrive, update server count & meta
         if (snapshot.docChanges().some((c) => c.type === 'added')) {
-          getCountFromServer(eventsRef)
-            .then((countSnap) => {
-              cachedTotalCount = countSnap.data().count;
-              const updatedMetrics = computeAnalyticsFromDocs(snapshot.docs, cachedTotalCount);
-              onMetrics(updatedMetrics);
-            })
-            .catch(() => {});
+          refreshMetaAndCount().then(() => {
+            const updatedMetrics = computeAnalyticsFromDocs(snapshot.docs, cachedTotalCount, cachedArchivedVisits, cachedMeta);
+            onMetrics(updatedMetrics);
+          });
         }
 
-        const metrics = computeAnalyticsFromDocs(snapshot.docs, cachedTotalCount);
+        const metrics = computeAnalyticsFromDocs(snapshot.docs, cachedTotalCount, cachedArchivedVisits, cachedMeta);
         onMetrics(metrics);
 
         if (onRecentLogs) {
@@ -472,7 +568,7 @@ export function subscribeToAnalytics(
         // Fallback to simple query if orderBy failed
         const qFallback = query(eventsRef, limit(10000));
         onSnapshot(qFallback, (snapshotFallback) => {
-          const metrics = computeAnalyticsFromDocs(snapshotFallback.docs, cachedTotalCount);
+          const metrics = computeAnalyticsFromDocs(snapshotFallback.docs, cachedTotalCount, cachedArchivedVisits, cachedMeta);
           onMetrics(metrics);
         });
       }

@@ -27,6 +27,17 @@
       },
       "required": ["totalPageviews", "totalUniqueVisitors"]
     },
+    "AnalyticsMeta": {
+      "title": "AnalyticsMeta",
+      "description": "Persistent total lifetime visitor counts and pruning metadata stored when detailed itemized logs older than 10 days are cleaned",
+      "type": "object",
+      "properties": {
+        "archivedVisits": { "type": "number", "description": "Total visits deleted during log pruning" },
+        "totalLifetimeVisits": { "type": "number", "description": "Cumulative total visits counter preserved permanently" },
+        "lastPrunedAt": { "type": "string", "description": "ISO timestamp of last prune" },
+        "lastPrunedCount": { "type": "number", "description": "Number of docs pruned in last run" }
+      }
+    },
     "PortfolioProject": {
       "title": "PortfolioProject",
       "description": "Portfolio project item",
@@ -100,6 +111,10 @@
     "/analytics_summary/{summaryId}": {
       "schema": "AnalyticsSummary",
       "description": "Cumulative traffic summaries"
+    },
+    "/analytics_meta/{metaId}": {
+      "schema": "AnalyticsMeta",
+      "description": "Persistent total lifetime visitor metadata"
     },
     "/portfolio_projects/{projectId}": {
       "schema": "PortfolioProject",
