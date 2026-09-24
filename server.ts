@@ -159,6 +159,37 @@ async function recordServerTrafficEvent(params: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+
+    // Increment lifetime stats counter in analytics_summary/lifetime_stats in real-time
+    const commitUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${databaseId}/documents:commit?key=${apiKey}`;
+    const commitBody = {
+      writes: [
+        {
+          transform: {
+            document: `projects/${projectId}/databases/${databaseId}/documents/analytics_summary/lifetime_stats`,
+            fieldTransforms: [
+              {
+                fieldPath: 'archivedVisits',
+                increment: { integerValue: '1' },
+              },
+              {
+                fieldPath: 'totalLifetimeVisitor',
+                increment: { integerValue: '1' },
+              },
+              {
+                fieldPath: 'totalPageviews',
+                increment: { integerValue: '1' },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    fetch(commitUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(commitBody),
+    }).catch(() => {});
   } catch (err) {
     console.debug('[Analytics Server] Record error:', err);
   }

@@ -13,6 +13,7 @@ import {
   addDoc,
   serverTimestamp,
   getDocFromServer,
+  getCountFromServer,
   onSnapshot
 } from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
@@ -255,7 +256,7 @@ function extractDocTimestamp(data: Record<string, any>): number {
 /**
  * Compute Visitor Analytics from Firestore Document snapshots
  */
-export function computeAnalyticsFromDocs(docs: any[]): VisitorAnalyticsSummary {
+export function computeAnalyticsFromDocs(docs: any[], totalCountOverride?: number): VisitorAnalyticsSummary {
   const nowMs = Date.now();
   const ms30Min = 30 * 60 * 1000;
   const ms1Day = 24 * 60 * 60 * 1000;
@@ -314,7 +315,9 @@ export function computeAnalyticsFromDocs(docs: any[]): VisitorAnalyticsSummary {
     }
   });
 
-  const totalEvents = docs.length;
+  const totalEvents = typeof totalCountOverride === 'number' && totalCountOverride > docs.length
+    ? totalCountOverride
+    : docs.length;
 
   const topPagesArray: TopPageEntry[] = Object.entries(pageCounts)
     .map(([path, visits]) => ({
@@ -358,9 +361,23 @@ export function computeAnalyticsFromDocs(docs: any[]): VisitorAnalyticsSummary {
 export async function fetchAnalyticsMetrics(): Promise<VisitorAnalyticsSummary> {
   try {
     const eventsRef = collection(db, 'analytics_events');
-    const q = query(eventsRef, limit(2000));
-    const snapshot = await getDocs(q);
-    return computeAnalyticsFromDocs(snapshot.docs);
+    let totalCount = 0;
+    try {
+      const countSnap = await getCountFromServer(eventsRef);
+      totalCount = countSnap.data().count;
+    } catch (e) {
+      console.debug('getCountFromServer error:', e);
+    }
+
+    let snapshot;
+    try {
+      const q = query(eventsRef, orderBy('timestamp', 'desc'), limit(2000));
+      snapshot = await getDocs(q);
+    } catch {
+      const qFallback = query(eventsRef, limit(2000));
+      snapshot = await getDocs(qFallback);
+    }
+    return computeAnalyticsFromDocs(snapshot.docs, totalCount);
   } catch (error) {
     console.error('Error fetching analytics metrics:', error);
     return {
@@ -389,11 +406,42 @@ export function subscribeToAnalytics(
 ): () => void {
   try {
     const eventsRef = collection(db, 'analytics_events');
-    const q = query(eventsRef, limit(2000));
+    let cachedTotalCount = 0;
+
+    // Fetch exact total count from server
+    getCountFromServer(eventsRef)
+      .then((countSnap) => {
+        cachedTotalCount = countSnap.data().count;
+      })
+      .catch((e) => console.debug('Initial count fetch error:', e));
+
+    // Try query with timestamp desc, or fallback to default limit
+    let q = query(eventsRef, limit(10000));
+    try {
+      q = query(eventsRef, orderBy('timestamp', 'desc'), limit(10000));
+    } catch {
+      q = query(eventsRef, limit(10000));
+    }
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const metrics = computeAnalyticsFromDocs(snapshot.docs);
+        if (cachedTotalCount < snapshot.size) {
+          cachedTotalCount = snapshot.size;
+        }
+
+        // Whenever new docs arrive, update server count
+        if (snapshot.docChanges().some((c) => c.type === 'added')) {
+          getCountFromServer(eventsRef)
+            .then((countSnap) => {
+              cachedTotalCount = countSnap.data().count;
+              const updatedMetrics = computeAnalyticsFromDocs(snapshot.docs, cachedTotalCount);
+              onMetrics(updatedMetrics);
+            })
+            .catch(() => {});
+        }
+
+        const metrics = computeAnalyticsFromDocs(snapshot.docs, cachedTotalCount);
         onMetrics(metrics);
 
         if (onRecentLogs) {
@@ -421,6 +469,12 @@ export function subscribeToAnalytics(
       },
       (error) => {
         console.error('Real-time analytics subscription error:', error);
+        // Fallback to simple query if orderBy failed
+        const qFallback = query(eventsRef, limit(10000));
+        onSnapshot(qFallback, (snapshotFallback) => {
+          const metrics = computeAnalyticsFromDocs(snapshotFallback.docs, cachedTotalCount);
+          onMetrics(metrics);
+        });
       }
     );
     return unsubscribe;

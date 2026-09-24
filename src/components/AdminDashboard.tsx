@@ -1031,11 +1031,11 @@ export const AdminDashboard: React.FC<Props> = ({
                   <Activity className="w-4 h-4 text-[#0f5132]" />
                 </div>
                 <div>
-                  <span className="text-[11px] font-semibold text-zinc-450 uppercase tracking-wider block">Realtime Visitors</span>
+                  <span className="text-[11px] font-semibold text-zinc-450 uppercase tracking-wider block">Realtime Visitors (30m)</span>
                   <div className="text-3xl font-bold mt-1 text-zinc-900 flex items-center gap-2">
-                    <span>{Math.max(1, Math.min(18, recentLogs.length > 0 ? recentLogs.slice(0, 8).length : 3))}</span>
+                    <span>{analytics ? analytics.traffic30Min : 0}</span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      active
+                      active (30m)
                     </span>
                   </div>
                 </div>
