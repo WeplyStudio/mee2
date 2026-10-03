@@ -22,6 +22,7 @@ import { InteractiveBrandName } from './components/InteractiveBrandName';
 import { EncryptedPrinciple } from './components/EncryptedPrinciple';
 import { LiveClock } from './components/LiveClock';
 import { InitialLoader } from './components/InitialLoader';
+import { MobileWelcomeDrawer } from './components/MobileWelcomeDrawer';
 import { ambientSound, setupGlobalUISFX, uiSfx } from './utils/audio';
 import { Language, Project } from './types';
 
@@ -137,6 +138,7 @@ export default function App() {
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [showInitialLoader, setShowInitialLoader] = useState<boolean>(true);
+  const [showMobileDrawer, setShowMobileDrawer] = useState<boolean>(false);
 
   // Firestore persistent site settings and portfolio projects
   const [siteSettings, setSiteSettings] = useState<SiteImageSettings | null>(null);
@@ -524,11 +526,35 @@ export default function App() {
         {showInitialLoader && (
           <InitialLoader
             key="app-initial-loader"
-            onComplete={() => setShowInitialLoader(false)}
+            onComplete={() => {
+              setShowInitialLoader(false);
+              // Open mobile welcome drawer automatically after initial loader on mobile
+              if (window.innerWidth < 768) {
+                setShowMobileDrawer(true);
+              }
+            }}
             lang={lang}
           />
         )}
       </AnimatePresence>
+
+      {/* ------------------------------------------------------------- */}
+      {/* MOBILE iOS WELCOME DRAWER */}
+      {/* ------------------------------------------------------------- */}
+      <MobileWelcomeDrawer
+        isOpen={showMobileDrawer}
+        onClose={() => setShowMobileDrawer(false)}
+        onExploreProjects={() => {
+          navigateTo('projects');
+        }}
+        onOpenAboutMe={() => {
+          navigateTo('aboutme');
+        }}
+        onOpenContact={() => {
+          navigateTo('contact');
+        }}
+        lang={lang}
+      />
 
       {/* ------------------------------------------------------------- */}
       {/* TOP FLOATING / STICKY HEADER (HIDDEN ON ADMIN DASHBOARD) */}
@@ -571,6 +597,9 @@ export default function App() {
               }}
               onReplayLoader={() => {
                 setShowInitialLoader(true);
+              }}
+              onOpenWelcomeDrawer={() => {
+                setShowMobileDrawer(true);
               }}
               menuLabel={t.menu}
             />
