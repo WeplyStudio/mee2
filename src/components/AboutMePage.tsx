@@ -440,17 +440,15 @@ export const AboutMePage: React.FC<Props> = ({
         </div>
 
         {/* SECTION 3: [who am i] */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start pt-10">
-          <div className="md:col-span-3 font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
+        <div className="pt-10 text-center space-y-4">
+          <div className="font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
             {t.whoAmITitle}
           </div>
-          <div className="md:col-span-9">
-            <ScrollReveal delay={100} distance={20}>
-              <div className="text-[13px] sm:text-sm text-zinc-600 leading-relaxed font-normal max-w-2xl lowercase space-y-4">
-                <p>{t.whoAmIContent}</p>
-              </div>
-            </ScrollReveal>
-          </div>
+          <ScrollReveal delay={100} distance={20}>
+            <div className="text-[13px] sm:text-sm text-zinc-600 leading-relaxed font-normal max-w-2xl mx-auto lowercase space-y-4">
+              <p>{t.whoAmIContent}</p>
+            </div>
+          </ScrollReveal>
         </div>
 
         {/* SECTION 4: [what i do] COLLAGE & DESCRIPTION IN THE CENTER */}
@@ -502,51 +500,46 @@ export const AboutMePage: React.FC<Props> = ({
         </div>
 
         {/* SECTION 5: [selected works] SUMMARY */}
-        <div className="pt-16">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-            <div className="md:col-span-4 space-y-2">
-              <div className="font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
-                {t.selectedWorksTitle}
-              </div>
-              <p className="text-xs sm:text-[13px] text-zinc-400 font-mono-code max-w-[200px] lowercase">
-                {t.selectedWorksSub}
-              </p>
-            </div>
-
-            <div className="md:col-span-8 space-y-6">
-              <ScrollReveal delay={100} distance={20}>
-                <div className="space-y-6">
-                  {projects.slice(0, 3).map((proj, idx) => (
-                    <div
-                      key={proj.id}
-                      onClick={() => {
-                        if (onSelectProject) onSelectProject(proj);
-                      }}
-                      className="border-b border-zinc-200 pb-5 space-y-1 group cursor-pointer hover:bg-zinc-100/50 p-2 -mx-2 rounded transition-colors"
-                    >
-                      <div className="flex gap-4 items-baseline">
-                        <span className="font-mono-code text-[11px] text-zinc-400">0{idx + 1}</span>
-                        <h3 className="text-xs sm:text-[14px] font-bold tracking-tight text-zinc-900 group-hover:underline lowercase">
-                          {proj.title}
-                        </h3>
-                      </div>
-                      <div className="pl-8 text-[11px] text-zinc-400 font-mono-code lowercase">
-                        {proj.type}
-                      </div>
+        <div className="pt-16 text-center space-y-4">
+          <div className="font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
+            {t.selectedWorksTitle}
+          </div>
+          <p className="text-xs sm:text-[13px] text-zinc-400 font-mono-code max-w-md mx-auto lowercase">
+            {t.selectedWorksSub}
+          </p>
+          <div className="max-w-xl mx-auto space-y-6 pt-4 text-left">
+            <ScrollReveal delay={100} distance={20}>
+              <div className="space-y-6">
+                {projects.slice(0, 3).map((proj, idx) => (
+                  <div
+                    key={proj.id}
+                    onClick={() => {
+                      if (onSelectProject) onSelectProject(proj);
+                    }}
+                    className="border-b border-zinc-200 pb-5 space-y-1 group cursor-pointer hover:bg-zinc-100/50 p-2 -mx-2 rounded transition-colors"
+                  >
+                    <div className="flex gap-4 items-baseline">
+                      <span className="font-mono-code text-[11px] text-zinc-400">0{idx + 1}</span>
+                      <h3 className="text-xs sm:text-[14px] font-bold tracking-tight text-zinc-900 group-hover:underline lowercase">
+                        {proj.title}
+                      </h3>
                     </div>
-                  ))}
-                </div>
-              </ScrollReveal>
-
-              <div className="pt-2 flex justify-start">
-                <button
-                  onClick={onSeeAllProjects}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-zinc-300 hover:border-black text-[11px] font-mono-code text-zinc-600 hover:text-black transition-all cursor-pointer"
-                >
-                  <span className="w-1 h-1 rounded-full bg-zinc-900"></span>
-                  <span>{t.seeAll}</span>
-                </button>
+                    <div className="pl-8 text-[11px] text-zinc-400 font-mono-code lowercase">
+                      {proj.type}
+                    </div>
+                  </div>
+                ))}
               </div>
+            </ScrollReveal>
+
+            <div className="pt-2 flex justify-center">
+              <button
+                onClick={onSeeAllProjects}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-zinc-300 hover:border-black text-[11px] font-mono-code text-zinc-600 hover:text-black transition-all cursor-pointer"
+              >
+                <span className="w-1 h-1 rounded-full bg-zinc-900"></span>
+                <span>{t.seeAll}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -878,71 +871,65 @@ export const AboutMePage: React.FC<Props> = ({
         </div>
 
         {/* SECTION 8: [now] */}
-        <div className="pt-16">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <div className="md:col-span-3 font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
-              {t.nowTitle}
-            </div>
-            <div className="md:col-span-9">
-              <ScrollReveal delay={100} distance={15}>
-                <div className="space-y-2 text-xs sm:text-[13.5px] text-zinc-600 font-medium lowercase">
-                  {t.nowItems.map((item, index) => (
-                    <div key={index} className="hover:text-black transition-colors py-0.5">
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </ScrollReveal>
-            </div>
+        <div className="pt-16 text-center space-y-4">
+          <div className="font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
+            {t.nowTitle}
           </div>
+          <ScrollReveal delay={100} distance={15}>
+            <div className="space-y-2 text-xs sm:text-[13.5px] text-zinc-600 font-medium lowercase max-w-md mx-auto">
+              {t.nowItems.map((item, index) => (
+                <div key={index} className="hover:text-black transition-colors py-0.5">
+                  {item}
+                </div>
+              ))}
+            </div>
+          </ScrollReveal>
         </div>
 
         {/* SECTION 9: [thought] SUMMARY */}
-        <div className="pt-16">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <div className="md:col-span-3 font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
-              {tMaster.thoughtLabel}
-            </div>
-            <div className="md:col-span-9 space-y-6">
-              <ScrollReveal delay={100} distance={20}>
-                <div className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed max-w-xl lowercase">
-                  {tMaster.thoughtIntro}
-                </div>
-              </ScrollReveal>
-
-              <div className="space-y-4 pt-4">
-                {philosophy.map((item, index) => (
-                  <div
-                    key={item.number}
-                    className={`border-b border-zinc-200/20 pb-4 ${
-                      index > 0 ? 'opacity-60 hover:opacity-100 transition-opacity' : ''
-                    }`}
-                  >
-                    <div className="flex items-baseline gap-4">
-                      <span className="text-xs font-mono-code text-zinc-400">{item.number}</span>
-                      <span className="text-sm font-bold text-zinc-900 lowercase">{item.title}</span>
-                    </div>
-                    {index === 0 && (
-                      <p className="text-xs text-zinc-500 italic mt-1.5 pl-8 max-w-lg lowercase">
-                        {item.headline}
-                      </p>
-                    )}
-                  </div>
-                ))}
+        <div className="pt-16 text-center space-y-4">
+          <div className="font-mono-code text-[11px] text-zinc-400 lowercase tracking-wider">
+            {tMaster.thoughtLabel}
+          </div>
+          <div className="max-w-xl mx-auto space-y-6 text-left">
+            <ScrollReveal delay={100} distance={20}>
+              <div className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed max-w-xl mx-auto text-center lowercase">
+                {tMaster.thoughtIntro}
               </div>
+            </ScrollReveal>
 
-              {onOpenThoughts && (
-                <div className="pt-2">
-                  <button
-                    onClick={onOpenThoughts}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-300 hover:border-black text-[11px] font-mono-code text-zinc-600 hover:text-black transition-all cursor-pointer lowercase"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-900"></span>
-                    <span>{tMaster.readHowIThink}</span>
-                  </button>
+            <div className="space-y-4 pt-4">
+              {philosophy.map((item, index) => (
+                <div
+                  key={item.number}
+                  className={`border-b border-zinc-200/20 pb-4 ${
+                    index > 0 ? 'opacity-60 hover:opacity-100 transition-opacity' : ''
+                  }`}
+                >
+                  <div className="flex items-baseline gap-4">
+                    <span className="text-xs font-mono-code text-zinc-400">{item.number}</span>
+                    <span className="text-sm font-bold text-zinc-900 lowercase">{item.title}</span>
+                  </div>
+                  {index === 0 && (
+                    <p className="text-xs text-zinc-500 italic mt-1.5 pl-8 max-w-lg lowercase">
+                      {item.headline}
+                    </p>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
+
+            {onOpenThoughts && (
+              <div className="pt-2 flex justify-center">
+                <button
+                  onClick={onOpenThoughts}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-300 hover:border-black text-[11px] font-mono-code text-zinc-600 hover:text-black transition-all cursor-pointer lowercase"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-900"></span>
+                  <span>{tMaster.readHowIThink}</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

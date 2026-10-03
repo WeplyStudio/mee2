@@ -703,6 +703,11 @@ export default function App() {
       {/* PROJECTS SHOWCASE SECTION (3 CORE PROJECTS) */}
       {/* ------------------------------------------------------------- */}
       <section id="projects" className="py-12 mt-32 sm:mt-48 md:mt-60 mb-12">
+        <ScrollReveal delay={100} distance={20}>
+          <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400 text-left px-6 sm:px-12 max-w-7xl mx-auto mb-8 sm:mb-12 lowercase tracking-wider">
+            {t.selectedWorksLabel || '[selected works]'}
+          </div>
+        </ScrollReveal>
         <div className="w-full">
           <div className="grid grid-cols-1 md:grid-cols-3">
             {currentProjects.map((project, idx) => (
@@ -735,96 +740,88 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* PRINCIPLES SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="principles" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto my-12">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
-          <div className="md:col-span-4">
-            <ScrollReveal delay={100} distance={20}>
-              <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400">
-                {t.principlesLabel}
+      <section id="principles" className="py-12 px-6 sm:px-12 max-w-md sm:max-w-lg mx-auto my-12 text-left">
+        <ScrollReveal delay={100} distance={20}>
+          <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400 mb-8 sm:mb-10 tracking-wide text-left">
+            {t.principlesLabel}
+          </div>
+        </ScrollReveal>
+        <div className="space-y-3 sm:space-y-4 text-xs sm:text-[13.5px] text-zinc-800 font-normal leading-relaxed text-left">
+          {currentPrinciples.map((principle, index) => (
+            <ScrollReveal key={index} delay={index * 80} distance={20}>
+              <div>
+                <EncryptedPrinciple text={principle} lang={lang} />
               </div>
             </ScrollReveal>
-          </div>
-          <div className="md:col-span-8 space-y-2 sm:space-y-2.5 text-xs sm:text-[13px] text-zinc-700">
-            {currentPrinciples.map((principle, index) => (
-              <ScrollReveal key={index} delay={index * 80} distance={20}>
-                <div>
-                  <EncryptedPrinciple text={principle} lang={lang} />
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
+          ))}
         </div>
       </section>
 
       {/* ------------------------------------------------------------- */}
       {/* THOUGHT SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="thought" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto my-12">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
-          <div className="md:col-span-4">
-            <ScrollReveal delay={100} distance={20}>
-              <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400">
-                {t.thoughtLabel}
-              </div>
-            </ScrollReveal>
+      <section id="thought" className="py-12 px-6 sm:px-12 max-w-xl sm:max-w-2xl mx-auto my-12 text-left">
+        <ScrollReveal delay={100} distance={20}>
+          <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400 mb-6 tracking-wide text-left">
+            {t.thoughtLabel}
           </div>
+        </ScrollReveal>
 
-          <div className="md:col-span-8 space-y-8">
-            <ScrollReveal delay={150} distance={25}>
-              <p className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed max-w-xl">
-                {t.thoughtIntro}
-              </p>
-            </ScrollReveal>
+        <div className="space-y-8 text-left">
+          <ScrollReveal delay={150} distance={25}>
+            <p className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed text-left">
+              {t.thoughtIntro}
+            </p>
+          </ScrollReveal>
 
-            <div className="space-y-4 pt-4">
-              {currentPhilosophy.map((item, idx) => {
-                const isExpanded = expandedThought === item.number;
-                return (
-                  <ScrollReveal key={item.number} delay={idx * 100} distance={25}>
-                    <div className="border-b border-zinc-100 pb-4 transition-colors">
-                      <button
-                        onClick={() => setExpandedThought(isExpanded ? '' : item.number)}
-                        className="flex items-baseline gap-4 w-full text-left group cursor-pointer py-1"
-                        aria-expanded={isExpanded}
-                      >
-                        <span className={`text-xs sm:text-[13px] font-mono-code transition-colors duration-300 ${
-                          isExpanded ? 'text-zinc-900 font-semibold' : 'text-zinc-400 group-hover:text-zinc-800'
+          <div className="space-y-4 pt-4 text-left">
+            {currentPhilosophy.map((item, idx) => {
+              const isExpanded = expandedThought === item.number;
+              return (
+                <ScrollReveal key={item.number} delay={idx * 100} distance={25}>
+                  <div className="border-b border-zinc-100 pb-4 transition-colors">
+                    <button
+                      onClick={() => setExpandedThought(isExpanded ? '' : item.number)}
+                      className="flex items-baseline gap-4 w-full text-left group cursor-pointer py-1"
+                      aria-expanded={isExpanded}
+                    >
+                      <span className={`text-xs sm:text-[13px] font-mono-code transition-colors duration-300 ${
+                        isExpanded ? 'text-zinc-900 font-semibold' : 'text-zinc-400 group-hover:text-zinc-800'
+                      }`}>
+                        {item.number}
+                      </span>
+                      <span className={`text-lg sm:text-xl font-bold tracking-tight transition-all duration-300 ${
+                        isExpanded ? 'text-black translate-x-1' : 'text-zinc-800 group-hover:text-black group-hover:translate-x-0.5'
+                      }`}>
+                        {item.title}
+                      </span>
+                    </button>
+
+                    {/* Smooth CSS Grid Accordion Transition */}
+                    <div
+                      className="grid transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden"
+                      style={{
+                        gridTemplateRows: isExpanded ? '1fr' : '0fr',
+                        opacity: isExpanded ? 1 : 0,
+                      }}
+                    >
+                      <div className="min-h-0 pl-8 sm:pl-9 space-y-1.5 pt-2">
+                        <p className={`text-xs sm:text-[13px] text-zinc-500 italic transition-all duration-500 delay-75 ${
+                          isExpanded ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
                         }`}>
-                          {item.number}
-                        </span>
-                        <span className={`text-lg sm:text-xl font-bold tracking-tight transition-all duration-300 ${
-                          isExpanded ? 'text-black translate-x-1' : 'text-zinc-800 group-hover:text-black group-hover:translate-x-0.5'
+                          {item.headline}
+                        </p>
+                        <p className={`text-xs sm:text-[12.5px] text-zinc-600 leading-relaxed pt-1 transition-all duration-500 delay-100 ${
+                          isExpanded ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
                         }`}>
-                          {item.title}
-                        </span>
-                      </button>
-
-                      {/* Smooth CSS Grid Accordion Transition */}
-                      <div
-                        className="grid transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden"
-                        style={{
-                          gridTemplateRows: isExpanded ? '1fr' : '0fr',
-                          opacity: isExpanded ? 1 : 0,
-                        }}
-                      >
-                        <div className="min-h-0 pl-8 sm:pl-9 space-y-1.5 pt-2">
-                          <p className={`text-xs sm:text-[13px] text-zinc-500 italic transition-all duration-500 delay-75 ${
-                            isExpanded ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
-                          }`}>
-                            {item.headline}
-                          </p>
-                          <p className={`text-xs sm:text-[12.5px] text-zinc-600 leading-relaxed pt-1 transition-all duration-500 delay-100 ${
-                            isExpanded ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
-                          }`}>
-                            {item.content}
-                          </p>
-                        </div>
+                          {item.content}
+                        </p>
                       </div>
                     </div>
-                  </ScrollReveal>
-                );
-              })}
-            </div>
+                  </div>
+                </ScrollReveal>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -837,22 +834,19 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* SERVICES SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="services" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto my-12">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
-          <div className="md:col-span-4 space-y-3">
-            <ScrollReveal delay={100} distance={20}>
-              <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400">
-                {t.servicesLabel}
-              </div>
-            </ScrollReveal>
+      <section id="services" className="py-12 px-6 sm:px-12 max-w-xl sm:max-w-2xl mx-auto my-12 text-left">
+        <ScrollReveal delay={100} distance={20}>
+          <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400 mb-6 tracking-wide text-left">
+            {t.servicesLabel}
           </div>
+        </ScrollReveal>
 
-          <div className="md:col-span-8 space-y-8">
-            <ScrollReveal delay={150} distance={25}>
-              <p className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed max-w-xl">
-                {t.servicesIntro}
-              </p>
-            </ScrollReveal>
+        <div className="space-y-8 text-left">
+          <ScrollReveal delay={150} distance={25}>
+            <p className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed text-left">
+              {t.servicesIntro}
+            </p>
+          </ScrollReveal>
 
             <div className="space-y-4 pt-4">
               {currentServices.map((service, idx) => {
@@ -933,50 +927,45 @@ export default function App() {
               </div>
             </ScrollReveal>
           </div>
-        </div>
-      </section>
+        </section>
 
       {/* ------------------------------------------------------------- */}
       {/* STATS & IMPACT IN NUMBERS SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="stats" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto my-12">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
-          <div className="md:col-span-4 space-y-3">
-            <ScrollReveal delay={100} distance={20}>
-              <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400">
-                {t.statsLabel}
-              </div>
-            </ScrollReveal>
+      <section id="stats" className="py-12 px-6 sm:px-12 max-w-xl sm:max-w-2xl mx-auto my-12 text-left">
+        <ScrollReveal delay={100} distance={20}>
+          <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400 mb-6 tracking-wide text-left">
+            {t.statsLabel}
           </div>
+        </ScrollReveal>
 
-          <div className="md:col-span-8 space-y-8">
-            <ScrollReveal delay={150} distance={25}>
-              <p className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed max-w-xl">
-                {t.statsIntro}
-              </p>
-            </ScrollReveal>
+        <div className="space-y-8 text-left">
+          <ScrollReveal delay={150} distance={25}>
+            <p className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed text-left">
+              {t.statsIntro}
+            </p>
+          </ScrollReveal>
 
-            {/* Stats Metric Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              {currentStats.map((stat, idx) => (
-                <ScrollReveal key={stat.number + stat.label} delay={idx * 80} distance={20}>
-                  <div className="p-6 rounded-2xl bg-zinc-50/80 border border-zinc-200/80 hover:border-zinc-400 hover:bg-zinc-50 transition-all duration-300 space-y-2 group">
-                    <div className="flex items-baseline gap-1 text-3xl sm:text-4xl font-extrabold text-zinc-900 tracking-tight font-mono-code">
-                      <span>{stat.number}</span>
-                      <span className="text-blue-600 group-hover:translate-x-0.5 transition-transform">{stat.suffix}</span>
+          {/* Stats Metric Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 text-left">
+            {currentStats.map((stat, idx) => (
+              <ScrollReveal key={stat.number + stat.label} delay={idx * 80} distance={20}>
+                <div className="p-6 rounded-2xl bg-zinc-50/80 border border-zinc-200/80 hover:border-zinc-400 hover:bg-zinc-50 transition-all duration-300 space-y-2 group">
+                  <div className="flex items-baseline gap-1 text-3xl sm:text-4xl font-extrabold text-zinc-900 tracking-tight font-mono-code">
+                    <span>{stat.number}</span>
+                    <span className="text-blue-600 group-hover:translate-x-0.5 transition-transform">{stat.suffix}</span>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-mono-code text-zinc-900 font-bold lowercase">
+                      {stat.label}
                     </div>
-                    <div className="space-y-0.5">
-                      <div className="text-xs font-mono-code text-zinc-900 font-bold lowercase">
-                        {stat.label}
-                      </div>
-                      <div className="text-[11px] text-zinc-500 leading-relaxed lowercase">
-                        {stat.sublabel}
-                      </div>
+                    <div className="text-[11px] text-zinc-500 leading-relaxed lowercase">
+                      {stat.sublabel}
                     </div>
                   </div>
-                </ScrollReveal>
-              ))}
-            </div>
+                </div>
+              </ScrollReveal>
+            ))}
           </div>
         </div>
       </section>
@@ -984,26 +973,23 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* FAQ SECTION */}
       {/* ------------------------------------------------------------- */}
-      <section id="faq" className="py-12 px-6 sm:px-12 max-w-5xl mx-auto my-12">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
-          <div className="md:col-span-4 space-y-3">
-            <ScrollReveal delay={100} distance={20}>
-              <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400">
-                {t.faqLabel}
-              </div>
-            </ScrollReveal>
+      <section id="faq" className="py-12 px-6 sm:px-12 max-w-xl sm:max-w-2xl mx-auto my-12 text-left">
+        <ScrollReveal delay={100} distance={20}>
+          <div className="text-xs sm:text-[13px] font-mono-code text-zinc-400 mb-6 tracking-wide text-left">
+            {t.faqLabel}
           </div>
+        </ScrollReveal>
 
-          <div className="md:col-span-8 space-y-8">
-            <ScrollReveal delay={150} distance={25}>
-              <p className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed max-w-xl">
-                {t.faqIntro}
-              </p>
-            </ScrollReveal>
+        <div className="space-y-8 text-left">
+          <ScrollReveal delay={150} distance={25}>
+            <p className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed text-left">
+              {t.faqIntro}
+            </p>
+          </ScrollReveal>
 
-            <div className="space-y-4 pt-4">
-              {currentFaq.map((faqItem, idx) => {
-                const isExpanded = expandedFaq === faqItem.number;
+          <div className="space-y-4 pt-4 text-left">
+            {currentFaq.map((faqItem, idx) => {
+              const isExpanded = expandedFaq === faqItem.number;
                 return (
                   <ScrollReveal key={faqItem.number} delay={idx * 80} distance={25}>
                     <div className="border-b border-zinc-100 pb-4 transition-colors">
@@ -1071,8 +1057,7 @@ export default function App() {
               })}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
       {/* ------------------------------------------------------------- */}
       {/* NOT THE END / EDITORIAL STATEMENT SECTION */}
