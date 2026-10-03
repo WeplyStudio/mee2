@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState, useRef, useMemo, Suspense, lazy } from 'react';
 import Lenis from 'lenis';
+import { AnimatePresence } from 'motion/react';
 import { Volume2, VolumeX, ArrowUpRight } from 'lucide-react';
 import { AnimatedSoundWave } from './components/AnimatedIcons';
 import { getProjectsData, getPrinciplesList, getPhilosophyData, getServicesData, getStatsData, getFaqData, TRANSLATIONS } from './data/portfolioData';
@@ -20,6 +21,7 @@ import { BottomScrollProgress } from './components/BottomScrollProgress';
 import { InteractiveBrandName } from './components/InteractiveBrandName';
 import { EncryptedPrinciple } from './components/EncryptedPrinciple';
 import { LiveClock } from './components/LiveClock';
+import { InitialLoader } from './components/InitialLoader';
 import { ambientSound, setupGlobalUISFX, uiSfx } from './utils/audio';
 import { Language, Project } from './types';
 
@@ -134,6 +136,7 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<Project | null>(() => parseLocationFromUrl(getInitialLang()).project);
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const [showInitialLoader, setShowInitialLoader] = useState<boolean>(true);
 
   // Firestore persistent site settings and portfolio projects
   const [siteSettings, setSiteSettings] = useState<SiteImageSettings | null>(null);
@@ -515,6 +518,19 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white text-[#121212] font-sans selection:bg-black selection:text-white relative">
       {/* ------------------------------------------------------------- */}
+      {/* INITIAL LOADING SCREEN WITH SLIDE UP ANIMATION (HIGHEST Z-INDEX) */}
+      {/* ------------------------------------------------------------- */}
+      <AnimatePresence>
+        {showInitialLoader && (
+          <InitialLoader
+            key="app-initial-loader"
+            onComplete={() => setShowInitialLoader(false)}
+            lang={lang}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ------------------------------------------------------------- */}
       {/* TOP FLOATING / STICKY HEADER (HIDDEN ON ADMIN DASHBOARD) */}
       {/* ------------------------------------------------------------- */}
       {currentPage !== 'admin' && (
@@ -552,6 +568,9 @@ export default function App() {
                     scrollToSection(id);
                   }, 100);
                 }
+              }}
+              onReplayLoader={() => {
+                setShowInitialLoader(true);
               }}
               menuLabel={t.menu}
             />

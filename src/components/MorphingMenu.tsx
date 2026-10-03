@@ -24,6 +24,7 @@ interface Props {
   onOpenStory: () => void;
   onOpen404?: () => void;
   onScrollTo: (id: string) => void;
+  onReplayLoader?: () => void;
   menuLabel: string;
 }
 
@@ -70,6 +71,7 @@ export const MorphingMenu: React.FC<Props> = ({
   onOpenContact,
   onOpenStory,
   onScrollTo,
+  onReplayLoader,
   menuLabel,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -181,7 +183,7 @@ export const MorphingMenu: React.FC<Props> = ({
                 className="flex flex-col justify-between h-full w-full p-6 sm:p-7 text-[#e4e4e7] cursor-default"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Top Row: o lend an ear       close */}
+                {/* Top Row: o lend an ear     [ replay intro ]     close */}
                 <motion.div variants={itemVariants} className="flex items-center justify-between text-xs text-zinc-400">
                   <button
                     type="button"
@@ -198,6 +200,25 @@ export const MorphingMenu: React.FC<Props> = ({
                       lend an ear
                     </span>
                   </button>
+
+                  {onReplayLoader && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        uiSfx.playClick();
+                        setIsOpen(false);
+                        setTimeout(() => {
+                          onReplayLoader();
+                        }, 250);
+                      }}
+                      onMouseEnter={() => uiSfx.playHover()}
+                      className="font-mono-code text-[11px] text-zinc-400 hover:text-white transition-colors cursor-pointer lowercase hidden sm:block"
+                      title="replay intro slide animation"
+                    >
+                      [ replay loader ]
+                    </button>
+                  )}
 
                   <button
                     type="button"

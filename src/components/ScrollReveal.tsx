@@ -46,7 +46,7 @@ export const ScrollReveal: React.FC<Props> = ({
   return (
     <div
       ref={ref}
-      className={`${className} transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]`}
+      className={`${className} transition-all duration-[2500ms] ease-[cubic-bezier(0.16,1,0.3,1)]`}
       style={{
         opacity: isVisible ? 1 : 0,
         transform: isVisible ? 'translateY(0px)' : `translateY(${safeDistance}px)`,

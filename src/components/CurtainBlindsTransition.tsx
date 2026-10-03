@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 
 export type BlindsTransitionStage = 'idle' | 'closing' | 'opening';
@@ -46,13 +47,14 @@ export const CurtainBlindsTransition: React.FC<CurtainBlindsTransitionProps> = (
     }
   }, [stage, onClosed, onOpened]);
 
-  if (stage === 'idle') return null;
+  if (stage === 'idle' || typeof document === 'undefined') return null;
 
   const isClosing = stage === 'closing';
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[99999] pointer-events-auto overflow-hidden select-none"
+      style={{ zIndex: 9999999 }}
+      className="fixed inset-0 pointer-events-auto overflow-hidden select-none"
       aria-hidden="true"
     >
       {SLATS_ARRAY.map((index) => {
@@ -103,6 +105,7 @@ export const CurtainBlindsTransition: React.FC<CurtainBlindsTransitionProps> = (
           </motion.div>
         );
       })}
-    </div>
+    </div>,
+    document.body
   );
 };
