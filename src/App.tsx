@@ -21,8 +21,6 @@ import { BottomScrollProgress } from './components/BottomScrollProgress';
 import { InteractiveBrandName } from './components/InteractiveBrandName';
 import { EncryptedPrinciple } from './components/EncryptedPrinciple';
 import { LiveClock } from './components/LiveClock';
-import { InitialLoader } from './components/InitialLoader';
-import { MobileWelcomeDrawer } from './components/MobileWelcomeDrawer';
 import { ambientSound, setupGlobalUISFX, uiSfx } from './utils/audio';
 import { Language, Project } from './types';
 
@@ -137,8 +135,6 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<Project | null>(() => parseLocationFromUrl(getInitialLang()).project);
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
-  const [showInitialLoader, setShowInitialLoader] = useState<boolean>(true);
-  const [showMobileDrawer, setShowMobileDrawer] = useState<boolean>(false);
 
   // Firestore persistent site settings and portfolio projects
   const [siteSettings, setSiteSettings] = useState<SiteImageSettings | null>(null);
@@ -520,43 +516,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white text-[#121212] font-sans selection:bg-black selection:text-white relative">
       {/* ------------------------------------------------------------- */}
-      {/* INITIAL LOADING SCREEN WITH SLIDE UP ANIMATION (HIGHEST Z-INDEX) */}
-      {/* ------------------------------------------------------------- */}
-      <AnimatePresence>
-        {showInitialLoader && (
-          <InitialLoader
-            key="app-initial-loader"
-            onComplete={() => {
-              setShowInitialLoader(false);
-              // Open mobile welcome drawer automatically after initial loader on mobile
-              if (window.innerWidth < 768) {
-                setShowMobileDrawer(true);
-              }
-            }}
-            lang={lang}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ------------------------------------------------------------- */}
-      {/* MOBILE iOS WELCOME DRAWER */}
-      {/* ------------------------------------------------------------- */}
-      <MobileWelcomeDrawer
-        isOpen={showMobileDrawer}
-        onClose={() => setShowMobileDrawer(false)}
-        onExploreProjects={() => {
-          navigateTo('projects');
-        }}
-        onOpenAboutMe={() => {
-          navigateTo('aboutme');
-        }}
-        onOpenContact={() => {
-          navigateTo('contact');
-        }}
-        lang={lang}
-      />
-
-      {/* ------------------------------------------------------------- */}
       {/* TOP FLOATING / STICKY HEADER (HIDDEN ON ADMIN DASHBOARD) */}
       {/* ------------------------------------------------------------- */}
       {currentPage !== 'admin' && (
@@ -594,12 +553,6 @@ export default function App() {
                     scrollToSection(id);
                   }, 100);
                 }
-              }}
-              onReplayLoader={() => {
-                setShowInitialLoader(true);
-              }}
-              onOpenWelcomeDrawer={() => {
-                setShowMobileDrawer(true);
               }}
               menuLabel={t.menu}
             />

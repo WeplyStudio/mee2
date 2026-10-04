@@ -14,7 +14,6 @@ interface Props {
   onOpenStory: () => void;
   onOpen404?: () => void;
   onScrollTo: (id: string) => void;
-  onReplayLoader?: () => void;
   menuLabel: string;
 }
 
