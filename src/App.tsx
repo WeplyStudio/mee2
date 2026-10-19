@@ -495,7 +495,7 @@ export default function App() {
       {/* ------------------------------------------------------------- */}
       {/* TOP FLOATING / STICKY HEADER */}
       {/* ------------------------------------------------------------- */}
-      <header className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 sm:py-5 flex items-center justify-between pointer-events-none transition-all">
+      <header className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 sm:py-5 flex items-center justify-between pointer-events-none transition-[color,background-color,border-color,box-shadow,transform]">
         {/* Left: empty spacer */}
         <div className="flex-1 flex justify-start"></div>
 
@@ -543,7 +543,7 @@ export default function App() {
               const nextIdx = (languages.indexOf(lang) + 1) % languages.length;
               setLang(languages[nextIdx]);
             }}
-            className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-[#d92338] hover:bg-[#c51c30] active:scale-95 text-white font-sans text-xs sm:text-[13px] rounded-[8px] sm:rounded-[9px] shadow-xs hover:shadow-sm transition-all cursor-pointer select-none"
+            className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-[#d92338] hover:bg-[#c51c30] active:scale-95 text-white font-sans text-xs sm:text-[13px] rounded-[8px] sm:rounded-[9px] shadow-xs hover:shadow-sm transition-[color,background-color,border-color,box-shadow,transform] cursor-pointer select-none"
             title={`Language: ${lang}. Click to switch.`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
