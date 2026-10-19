@@ -31,16 +31,14 @@ const ContactPage = lazy(() => import('./components/ContactPage').then(m => ({ d
 const ProjectDetailPage = lazy(() => import('./components/ProjectDetailPage').then(m => ({ default: m.ProjectDetailPage })));
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 const ContactModal = lazy(() => import('./components/ContactModal').then(m => ({ default: m.ContactModal })));
-const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
 import {
   SiteImageSettings,
   fetchSiteSettings,
   fetchProjectsFromFirestore,
-  logVisitorPageView
 } from './lib/firebase';
 
-type PageType = 'home' | 'aboutme' | 'projects' | 'contact' | 'project-detail' | '404' | 'admin';
+type PageType = 'home' | 'aboutme' | 'projects' | 'contact' | 'project-detail' | '404';
 
 interface NavigationTarget {
   page: PageType;
@@ -72,11 +70,6 @@ function parseLocationFromUrl(currentLang: Language = 'en'): { page: PageType; p
   const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
   const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '').trim();
 
-  // If path or hash points to admin dashboard
-  if (rawPath === '/admin' || rawPath === '/dashboard' || hash === 'admin' || hash === 'dashboard') {
-    return { page: 'admin', project: null, path: '/admin' };
-  }
-
   // If path is root '/' but hash specifies a page (e.g. #aboutme, #/contact)
   const route = (rawPath === '/' && hash && !hash.startsWith('projects') && !hash.startsWith('services') && !hash.startsWith('stats') && !hash.startsWith('faq'))
     ? `/${hash}`
@@ -84,10 +77,6 @@ function parseLocationFromUrl(currentLang: Language = 'en'): { page: PageType; p
 
   if (route === '/' || route === '' || route === '/home') {
     return { page: 'home', project: null, path: '/' };
-  }
-
-  if (route === '/admin' || route === '/dashboard') {
-    return { page: 'admin', project: null, path: '/admin' };
   }
 
   if (route === '/aboutme' || route === '/about') {
@@ -157,14 +146,6 @@ export default function App() {
     loadFirestoreData();
   }, []);
 
-  // Automatically log visitor traffic / analytics to Firestore
-  useEffect(() => {
-    if (currentPage !== 'admin' && typeof window !== 'undefined') {
-      const path = window.location.pathname || '/';
-      logVisitorPageView(path);
-    }
-  }, [currentPage]);
-
   // Blinds Curtain Transition State
   const [blindsStage, setBlindsStage] = useState<BlindsTransitionStage>('idle');
   const [transitionTitle, setTransitionTitle] = useState<string>('jason');
@@ -209,8 +190,6 @@ export default function App() {
       title = 'selected works';
     } else if (page === 'contact') {
       title = 'get in touch';
-    } else if (page === 'admin') {
-      title = 'admin dashboard';
     } else if (page === 'home') {
       title = 'jason';
     } else if (page === '404') {
@@ -410,9 +389,7 @@ export default function App() {
     document.documentElement.lang = lang;
     let pageTitle = 'Jason — Designer & Software Engineer';
     
-    if (currentPage === 'admin') {
-      pageTitle = 'Admin Dashboard & Analytics — Jason';
-    } else if (currentPage === 'projects') {
+    if (currentPage === 'projects') {
       pageTitle = lang === 'id' ? 'Karya & Proyek — Jason' : 'Works & Projects — Jason';
     } else if (currentPage === 'project-detail' && activeProject) {
       pageTitle = `${activeProject.title} — Jason`;
@@ -516,81 +493,71 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white text-[#121212] font-sans selection:bg-black selection:text-white relative">
       {/* ------------------------------------------------------------- */}
-      {/* TOP FLOATING / STICKY HEADER (HIDDEN ON ADMIN DASHBOARD) */}
+      {/* TOP FLOATING / STICKY HEADER */}
       {/* ------------------------------------------------------------- */}
-      {currentPage !== 'admin' && (
-        <header className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 sm:py-5 flex items-center justify-between pointer-events-none transition-all">
-          {/* Left: empty spacer */}
-          <div className="flex-1 flex justify-start"></div>
+      <header className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 sm:py-5 flex items-center justify-between pointer-events-none transition-all">
+        {/* Left: empty spacer */}
+        <div className="flex-1 flex justify-start"></div>
 
-          {/* Center / Primary: [ ] Morphing Menu Button to Card */}
-          <div className="flex justify-center">
-            <MorphingMenu
-              isOpen={isMenuOpen}
-              setIsOpen={setIsMenuOpen}
-              lang={lang}
-              onSelectLang={setLang}
-              isAudioPlaying={isAudioPlaying}
-              onToggleAudio={toggleSound}
-              onOpenContact={() => {
-                navigateTo('contact');
-                setIsMenuOpen(false);
-              }}
-              onOpenStory={() => {
-                navigateTo('aboutme');
-                setIsMenuOpen(false);
-              }}
-              onOpen404={() => {
-                navigateTo('404');
-                setIsMenuOpen(false);
-              }}
-              onScrollTo={(id) => {
-                if (id === 'projects') {
-                  navigateTo('projects');
-                } else {
-                  navigateTo('home');
-                  setTimeout(() => {
-                    scrollToSection(id);
-                  }, 100);
-                }
-              }}
-              menuLabel={t.menu}
-            />
-          </div>
+        {/* Center / Primary: [ ] Morphing Menu Button to Card */}
+        <div className="flex justify-center">
+          <MorphingMenu
+            isOpen={isMenuOpen}
+            setIsOpen={setIsMenuOpen}
+            lang={lang}
+            onSelectLang={setLang}
+            isAudioPlaying={isAudioPlaying}
+            onToggleAudio={toggleSound}
+            onOpenContact={() => {
+              navigateTo('contact');
+              setIsMenuOpen(false);
+            }}
+            onOpenStory={() => {
+              navigateTo('aboutme');
+              setIsMenuOpen(false);
+            }}
+            onOpen404={() => {
+              navigateTo('404');
+              setIsMenuOpen(false);
+            }}
+            onScrollTo={(id) => {
+              if (id === 'projects') {
+                navigateTo('projects');
+              } else {
+                navigateTo('home');
+                setTimeout(() => {
+                  scrollToSection(id);
+                }, 100);
+              }
+            }}
+            menuLabel={t.menu}
+          />
+        </div>
 
-          {/* Right: Red Language selector badge (Matching Screenshot) */}
-          <div className="flex-1 flex justify-end">
-            <button
-              onClick={() => {
-                uiSfx.playSwitch();
-                const languages: Language[] = ['en', 'id', 'de', 'ja'];
-                const nextIdx = (languages.indexOf(lang) + 1) % languages.length;
-                setLang(languages[nextIdx]);
-              }}
-              className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-[#d92338] hover:bg-[#c51c30] active:scale-95 text-white font-sans text-xs sm:text-[13px] rounded-[8px] sm:rounded-[9px] shadow-xs hover:shadow-sm transition-all cursor-pointer select-none"
-              title={`Language: ${lang}. Click to switch.`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-              <span className="font-medium lowercase tracking-tight">{lang}</span>
-            </button>
-          </div>
-        </header>
-      )}
+        {/* Right: Red Language selector badge (Matching Screenshot) */}
+        <div className="flex-1 flex justify-end">
+          <button
+            onClick={() => {
+              uiSfx.playSwitch();
+              const languages: Language[] = ['en', 'id', 'de', 'ja'];
+              const nextIdx = (languages.indexOf(lang) + 1) % languages.length;
+              setLang(languages[nextIdx]);
+            }}
+            className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-[#d92338] hover:bg-[#c51c30] active:scale-95 text-white font-sans text-xs sm:text-[13px] rounded-[8px] sm:rounded-[9px] shadow-xs hover:shadow-sm transition-all cursor-pointer select-none"
+            title={`Language: ${lang}. Click to switch.`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+            <span className="font-medium lowercase tracking-tight">{lang}</span>
+          </button>
+        </div>
+      </header>
 
       {/* ------------------------------------------------------------- */}
       {/* MAIN CONTENT LAYER (SLIDES UP OVER STICKY FOOTER REVEAL) */}
       {/* ------------------------------------------------------------- */}
       <div className="relative z-10 bg-white pb-16 min-h-screen">
         <Suspense fallback={<div className="min-h-screen bg-white" />}>
-          {currentPage === 'admin' ? (
-            <AdminDashboard
-              onBackToSite={() => {
-                navigateTo('home', '/');
-              }}
-              onProjectsUpdated={loadFirestoreData}
-              onSettingsUpdated={loadFirestoreData}
-            />
-          ) : currentPage === 'home' ? (
+          {currentPage === 'home' ? (
             <>
               {/* ------------------------------------------------------------- */}
               {/* HERO SECTION */}
@@ -1191,9 +1158,6 @@ export default function App() {
             } else {
               scrollToSection('faq');
             }
-          }}
-          onNavigateAdmin={() => {
-            navigateTo('admin', '/admin');
           }}
         />
       )}

@@ -14,7 +14,6 @@ interface FooterProps {
   onScrollToProjects: () => void;
   onScrollToServices?: () => void;
   onScrollToFaq?: () => void;
-  onNavigateAdmin?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
@@ -26,7 +25,6 @@ export const Footer: React.FC<FooterProps> = ({
   onScrollToProjects,
   onScrollToServices,
   onScrollToFaq,
-  onNavigateAdmin,
 }) => {
   const t = TRANSLATIONS[lang];
   const [hoveredLetter, setHoveredLetter] = useState<number | null>(null);
@@ -201,15 +199,6 @@ export const Footer: React.FC<FooterProps> = ({
             <span>indonesia</span>
             <div className="flex items-center gap-4">
               <span>{t.designedBy}</span>
-              {onNavigateAdmin && (
-                <button
-                  onClick={onNavigateAdmin}
-                  className="text-zinc-400 hover:text-zinc-800 transition-colors cursor-pointer text-[11px]"
-                  title="Masuk ke portal admin Firestore"
-                >
-                  [admin]
-                </button>
-              )}
             </div>
           </div>
         </ScrollReveal>

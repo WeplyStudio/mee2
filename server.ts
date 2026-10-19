@@ -66,45 +66,6 @@ async function initSqliteDb() {
 
     // Initialize Cloudflare D1 Compatible SQLite Schema
     db.run(`
-      CREATE TABLE IF NOT EXISTS analytics_events (
-        id TEXT PRIMARY KEY,
-        visitorId TEXT,
-        path TEXT,
-        deviceType TEXT,
-        browser TEXT,
-        referrer TEXT,
-        dateStr TEXT,
-        timestamp TEXT
-      );
-
-      CREATE TABLE IF NOT EXISTS visitor_logs (
-        id TEXT PRIMARY KEY,
-        visitorId TEXT NOT NULL,
-        path TEXT NOT NULL,
-        deviceType DEFAULT 'desktop',
-        browser DEFAULT 'Unknown',
-        referrer DEFAULT 'Direct',
-        dateStr TEXT,
-        timestamp TEXT NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS analytics_meta (
-        id TEXT PRIMARY KEY,
-        archivedVisits INTEGER DEFAULT 0,
-        totalLifetimeVisits INTEGER DEFAULT 0,
-        lastPrunedAt TEXT,
-        lastPrunedCount INTEGER DEFAULT 0
-      );
-
-      CREATE TABLE IF NOT EXISTS lifetime_stats (
-        id TEXT PRIMARY KEY,
-        archivedVisits INTEGER DEFAULT 0,
-        totalLifetimeVisits INTEGER DEFAULT 0,
-        lastPrunedAt TEXT,
-        lastPrunedCount INTEGER DEFAULT 0,
-        updatedAt TEXT
-      );
-
       CREATE TABLE IF NOT EXISTS portfolio_projects (
         id TEXT PRIMARY KEY,
         title TEXT,
@@ -139,33 +100,7 @@ async function initSqliteDb() {
         key TEXT PRIMARY KEY,
         value TEXT
       );
-
-      CREATE TABLE IF NOT EXISTS dashboard_reminders (
-        id TEXT PRIMARY KEY,
-        title TEXT,
-        time TEXT,
-        actionUrl TEXT,
-        updatedAt TEXT
-      );
     `);
-
-    // Ensure analytics_meta row exists without resetting existing counts
-    const metaCheck = db.exec("SELECT totalLifetimeVisits FROM analytics_meta WHERE id = 'lifetime'");
-    if (metaCheck.length === 0 || metaCheck[0].values.length === 0) {
-      let existingCount = 0;
-      try {
-        const evts = db.exec("SELECT COUNT(*) FROM analytics_events");
-        if (evts.length > 0 && evts[0].values.length > 0) {
-          existingCount = Math.max(existingCount, Number(evts[0].values[0][0]) || 0);
-        }
-        const logs = db.exec("SELECT COUNT(*) FROM visitor_logs");
-        if (logs.length > 0 && logs[0].values.length > 0) {
-          existingCount = Math.max(existingCount, Number(logs[0].values[0][0]) || 0);
-        }
-      } catch {}
-      db.run("INSERT INTO analytics_meta (id, archivedVisits, totalLifetimeVisits) VALUES ('lifetime', 0, ?)", [existingCount]);
-      db.run("INSERT OR IGNORE INTO lifetime_stats (id, archivedVisits, totalLifetimeVisits) VALUES ('lifetime', 0, ?)", [existingCount]);
-    }
 
     saveSqliteDb();
     console.log('[Cloudflare D1 SQLite] Database initialized successfully!');
@@ -227,31 +162,7 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// Middleware to automatically record EVERY incoming traffic request (real users, script fetch, curl, python, bots, API calls)
-app.use((req: Request, res: Response, next) => {
-  // Exclude static assets (js, css, images, fonts, maps) to avoid counting asset files
-  const isStaticAsset = req.path.match(/\.(js|css|webp|jpeg|jpg|png|svg|woff2?|ttf|eot|ico|map|json)$/i);
-  // Exclude dashboard metric reads & explicit logs to avoid double-logging
-  const isAnalyticsReadOrExplicitLog =
-    req.path === '/api/analytics/metrics' ||
-    req.path === '/api/analytics/recent' ||
-    req.path === '/api/analytics/log' ||
-    req.path === '/api/track-visit';
 
-  if (!isStaticAsset && !isAnalyticsReadOrExplicitLog) {
-    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
-    const userAgent = (req.get('user-agent') || 'custom-fetch-script') as string;
-    const referrer = (req.get('referrer') || 'Direct') as string;
-    const visitorId = (req.query.visitorId || req.body?.visitorId) as string | undefined;
-
-    try {
-      recordServerTrafficEvent({ path: req.path || '/', clientIp, userAgent, referrer, visitorId });
-    } catch (e) {
-      console.error('[Traffic Tracking Error]:', e);
-    }
-  }
-  next();
-});
 
 // Server-side ONLY secrets
 const ACTIVE_TELEGRAM_BOT_TOKEN = '8459837666:AAHY7tsADTJ9jvpDYfXKQXXvog3Cwo4Mwf0';
@@ -291,255 +202,12 @@ function sanitizeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
-// Record traffic event directly to Cloudflare D1 SQLite database
-function recordServerTrafficEvent(params: {
-  path: string;
-  clientIp?: string;
-  userAgent?: string;
-  referrer?: string;
-  visitorId?: string;
-}) {
-  const reqPath = params.path || '/';
-  const ua = params.userAgent || '';
-  const lowerUa = ua.toLowerCase();
-  let browser = 'Other / Web Client';
 
-  if (ua.includes('Selenium') || ua.includes('WebDriver')) browser = 'Selenium / WebDriver';
-  else if (ua.includes('HeadlessChrome') || ua.includes('Puppeteer') || ua.includes('Playwright')) browser = 'Headless / Automation';
-  else if (lowerUa.includes('python')) browser = 'Python / Script';
-  else if (lowerUa.includes('curl')) browser = 'cURL / Script';
-  else if (lowerUa.includes('postman')) browser = 'Postman / Script';
-  else if (lowerUa.includes('axios') || lowerUa.includes('node-fetch') || lowerUa.includes('wget') || lowerUa.includes('httpclient') || lowerUa.includes('go-http-client')) browser = 'HTTP Fetch / Script';
-  else if (ua.includes('Chrome')) browser = 'Chrome';
-  else if (ua.includes('Safari')) browser = 'Safari';
-  else if (ua.includes('Firefox')) browser = 'Firefox';
-  else if (ua.includes('Edge')) browser = 'Edge';
-  else if (ua) browser = ua.slice(0, 30);
 
-  let deviceType = 'desktop';
-  if (/tablet|ipad|playbook|silk/i.test(ua)) deviceType = 'tablet';
-  else if (/mobile|iphone|ipod|android/i.test(ua)) deviceType = 'mobile';
 
-  let vid = params.visitorId;
-  if (!vid) {
-    const vidSeed = (params.clientIp || '') + (params.userAgent || '');
-    let hash = 0;
-    for (let i = 0; i < vidSeed.length; i++) {
-      hash = (hash << 5) - hash + vidSeed.charCodeAt(i);
-      hash |= 0;
-    }
-    vid = 'req_' + Math.abs(hash).toString(36) + '_' + (params.clientIp || 'client').replace(/[^a-zA-Z0-9]/g, '').slice(-6);
-  }
 
-  const nowIso = new Date().toISOString();
-  const dateStr = nowIso.split('T')[0];
-  const evtId = 'evt_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
 
-  // 1. Insert into SQLite analytics_events & visitor_logs
-  runSql(
-    `INSERT INTO analytics_events (id, visitorId, path, deviceType, browser, referrer, dateStr, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [evtId, vid, reqPath, deviceType, browser, params.referrer || 'Direct', dateStr, nowIso]
-  );
-  runSql(
-    `INSERT INTO visitor_logs (id, visitorId, path, deviceType, browser, referrer, dateStr, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [evtId, vid, reqPath, deviceType, browser, params.referrer || 'Direct', dateStr, nowIso]
-  );
 
-  // 2. Increment totalLifetimeVisits in analytics_meta and lifetime_stats in SQLite
-  runSql(`UPDATE analytics_meta SET totalLifetimeVisits = totalLifetimeVisits + 1 WHERE id = 'lifetime'`);
-  runSql(`INSERT OR REPLACE INTO lifetime_stats (id, archivedVisits, totalLifetimeVisits, updatedAt) VALUES ('lifetime', COALESCE((SELECT archivedVisits FROM analytics_meta WHERE id = 'lifetime'), 0), COALESCE((SELECT totalLifetimeVisits FROM analytics_meta WHERE id = 'lifetime'), 1), ?)`, [nowIso]);
-}
-
-// API Routes for Cloudflare D1 SQLite Analytics
-app.all('/api/analytics/log', (req: Request, res: Response) => {
-  const reqPath = (req.query.path || req.body?.path || '/') as string;
-  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
-  const userAgent = (req.query.userAgent || req.body?.userAgent || req.get('user-agent') || 'browser') as string;
-  const referrer = (req.query.referrer || req.body?.referrer || req.get('referrer') || 'Direct') as string;
-  const visitorId = (req.query.visitorId || req.body?.visitorId) as string | undefined;
-
-  recordServerTrafficEvent({ path: reqPath, clientIp, userAgent, referrer, visitorId });
-
-  const meta = queryOne<{ totalLifetimeVisits: number }>("SELECT totalLifetimeVisits FROM analytics_meta WHERE id = 'lifetime'");
-  res.json({ ok: true, message: 'Logged in SQLite Cloudflare D1', totalVisits: meta?.totalLifetimeVisits || 1 });
-});
-
-app.all('/api/track-visit', (req: Request, res: Response) => {
-  const reqPath = (req.query.path || req.body?.path || '/') as string;
-  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
-  const userAgent = (req.query.userAgent || req.body?.userAgent || req.get('user-agent') || 'custom-request') as string;
-  const referrer = (req.query.referrer || req.body?.referrer || req.get('referrer') || 'Direct') as string;
-  const visitorId = (req.query.visitorId || req.body?.visitorId) as string | undefined;
-
-  recordServerTrafficEvent({ path: reqPath, clientIp, userAgent, referrer, visitorId });
-  res.json({ ok: true, message: 'Visit recorded in SQLite D1 database', path: reqPath });
-});
-
-app.get('/api/analytics/metrics', (req: Request, res: Response) => {
-  const nowMs = Date.now();
-  const ms30Min = 30 * 60 * 1000;
-  const ms1Day = 24 * 60 * 60 * 1000;
-  const ms30Days = 30 * 24 * 60 * 60 * 1000;
-  const ms90Days = 90 * 24 * 60 * 60 * 1000;
-
-  // Query all active analytics events without low limits
-  const events = queryAll<{
-    id: string;
-    visitorId: string;
-    path: string;
-    deviceType: string;
-    browser: string;
-    referrer: string;
-    dateStr: string;
-    timestamp: string;
-  }>('SELECT * FROM analytics_events ORDER BY timestamp DESC');
-
-  const meta = queryOne<{
-    archivedVisits: number;
-    totalLifetimeVisits: number;
-    lastPrunedAt?: string;
-    lastPrunedCount?: number;
-  }>("SELECT * FROM analytics_meta WHERE id = 'lifetime'") || { archivedVisits: 0, totalLifetimeVisits: 0 };
-
-  let traffic30Min = 0;
-  let traffic1Day = 0;
-  let traffic30Days = 0;
-  let traffic90Days = 0;
-
-  const uniqueVisitors = new Set<string>();
-  const pageCounts: Record<string, number> = {};
-  const referrers: Record<string, number> = {};
-  const dailyMap: Record<string, { visits: number; uniqueSet: Set<string> }> = {};
-
-  let mobileCount = 0;
-  let desktopCount = 0;
-  let tabletCount = 0;
-
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(nowMs - i * 24 * 60 * 60 * 1000);
-    const ds = d.toISOString().split('T')[0];
-    dailyMap[ds] = { visits: 0, uniqueSet: new Set() };
-  }
-
-  events.forEach((evt) => {
-    const vid = evt.visitorId || 'anon';
-    uniqueVisitors.add(vid);
-
-    const eventTime = new Date(evt.timestamp).getTime() || nowMs;
-    const ageMs = Math.max(0, nowMs - eventTime);
-
-    if (ageMs <= ms30Min) traffic30Min++;
-    if (ageMs <= ms1Day) traffic1Day++;
-    if (ageMs <= ms30Days) traffic30Days++;
-    if (ageMs <= ms90Days) traffic90Days++;
-
-    const p = evt.path || '/';
-    pageCounts[p] = (pageCounts[p] || 0) + 1;
-
-    const ref = evt.referrer || 'Direct';
-    referrers[ref] = (referrers[ref] || 0) + 1;
-
-    if (evt.deviceType === 'mobile') mobileCount++;
-    else if (evt.deviceType === 'tablet') tabletCount++;
-    else desktopCount++;
-
-    const itemDate = evt.dateStr || new Date(eventTime).toISOString().split('T')[0];
-    if (dailyMap[itemDate]) {
-      dailyMap[itemDate].visits++;
-      dailyMap[itemDate].uniqueSet.add(vid);
-    }
-  });
-
-  const totalHits = Math.max(meta.totalLifetimeVisits || 0, (meta.archivedVisits || 0) + events.length);
-
-  const topPagesArray = Object.entries(pageCounts)
-    .map(([path, visits]) => ({
-      path,
-      visits,
-      percentage: totalHits > 0 ? Math.round((visits / totalHits) * 100) : 0,
-    }))
-    .sort((a, b) => b.visits - a.visits);
-
-  const dailyTrend = Object.keys(dailyMap)
-    .sort()
-    .map((date) => ({
-      date: date.slice(5),
-      visits: dailyMap[date].visits,
-      unique: dailyMap[date].uniqueSet.size,
-    }));
-
-  res.json({
-    totalVisits: totalHits,
-    totalLifetimeVisits: totalHits,
-    archivedVisits: meta.archivedVisits || 0,
-    totalUniqueVisitors: uniqueVisitors.size,
-    uniqueVisitors: uniqueVisitors.size,
-    traffic30Min,
-    traffic1Day,
-    traffic30Days,
-    traffic90Days,
-    topPages: topPagesArray,
-    referrers,
-    deviceBreakdown: { mobile: mobileCount, desktop: desktopCount, tablet: tabletCount },
-    dailyTrend,
-    lastPrunedCount: meta.lastPrunedCount || 0,
-    lastPrunedAt: meta.lastPrunedAt,
-    databaseEngine: 'Cloudflare D1 SQL Engine',
-  });
-});
-
-app.get('/api/analytics/recent', (req: Request, res: Response) => {
-  const limitCount = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 100000);
-  const events = queryAll<{
-    id: string;
-    visitorId: string;
-    path: string;
-    deviceType: string;
-    browser: string;
-    referrer: string;
-    timestamp: string;
-  }>('SELECT * FROM analytics_events ORDER BY timestamp DESC LIMIT ?', [limitCount]);
-
-  res.json({ ok: true, logs: events });
-});
-
-app.post('/api/analytics/prune', (req: Request, res: Response) => {
-  const countRow = queryOne<{ count: number }>('SELECT COUNT(*) as count FROM analytics_events');
-  const totalLogsCount = countRow?.count || 0;
-  const ONE_MILLION = 1000000;
-
-  if (totalLogsCount > ONE_MILLION) {
-    const excessToPrune = totalLogsCount - ONE_MILLION;
-    runSql(
-      'DELETE FROM analytics_events WHERE id IN (SELECT id FROM analytics_events ORDER BY timestamp ASC LIMIT ?)',
-      [excessToPrune]
-    );
-    runSql(
-      'DELETE FROM visitor_logs WHERE id IN (SELECT id FROM visitor_logs ORDER BY timestamp ASC LIMIT ?)',
-      [excessToPrune]
-    );
-    runSql(
-      'UPDATE analytics_meta SET archivedVisits = archivedVisits + ?, lastPrunedAt = ?, lastPrunedCount = ? WHERE id = "lifetime"',
-      [excessToPrune, new Date().toISOString(), excessToPrune]
-    );
-
-    const meta = queryOne<{ totalLifetimeVisits: number; archivedVisits: number }>("SELECT * FROM analytics_meta WHERE id = 'lifetime'");
-    return res.json({
-      ok: true,
-      deletedCount: excessToPrune,
-      newTotalLifetimeVisits: meta?.totalLifetimeVisits || totalLogsCount,
-      message: `Pembersihan Cloudflare D1 sukses! ${excessToPrune.toLocaleString('id-ID')} histori visitor (>1 Juta) berhasil dipindahkan ke akumulasi total lifetime.`,
-    });
-  }
-
-  const meta = queryOne<{ totalLifetimeVisits: number; archivedVisits: number }>("SELECT * FROM analytics_meta WHERE id = 'lifetime'");
-  return res.json({
-    ok: true,
-    deletedCount: 0,
-    newTotalLifetimeVisits: Math.max(meta?.totalLifetimeVisits || 0, totalLogsCount + (meta?.archivedVisits || 0)),
-    message: `Jumlah log visitor saat ini (${totalLogsCount.toLocaleString('id-ID')} data) belum mencapai batas 1 Juta (1,000,000). Tidak ada data yang dihapus.`,
-  });
-});
 
 // Projects API
 app.get('/api/projects', (req: Request, res: Response) => {
@@ -631,27 +299,7 @@ app.post('/api/settings', (req: Request, res: Response) => {
   res.json({ ok: true, message: 'Settings saved in SQLite Cloudflare D1' });
 });
 
-// Dashboard Reminders API
-app.get('/api/reminder', (req: Request, res: Response) => {
-  const reminder = queryOne('SELECT * FROM dashboard_reminders WHERE id = "current"');
-  res.json({ ok: true, reminder: reminder || null });
-});
 
-app.post('/api/reminder', (req: Request, res: Response) => {
-  const r = req.body || {};
-  const id = 'current';
-  const title = r.title || 'Meeting with Arc Company';
-  const time = r.time || '02.00 pm - 04.00 pm';
-  const actionUrl = r.actionUrl || '';
-  const updatedAt = new Date().toISOString();
-
-  runSql(
-    `INSERT OR REPLACE INTO dashboard_reminders (id, title, time, actionUrl, updatedAt) VALUES (?, ?, ?, ?, ?)`,
-    [id, title, time, actionUrl, updatedAt]
-  );
-
-  res.json({ ok: true, reminder: { id, title, time, actionUrl, updatedAt } });
-});
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
@@ -831,14 +479,6 @@ async function startServer() {
     );
 
     app.get('*', (req: Request, res: Response) => {
-      const ua = req.get('user-agent') || '';
-      const isScriptOrBot = /curl|python|wget|postman|axios|httpclient|bot|crawl|spider/i.test(ua);
-      if (isScriptOrBot && !req.path.includes('.')) {
-        const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
-        const referrer = req.get('referrer') || 'Direct';
-        recordServerTrafficEvent({ path: req.path || '/', clientIp, userAgent: ua, referrer });
-      }
-
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       if (cachedIndexHtml) res.send(cachedIndexHtml);
